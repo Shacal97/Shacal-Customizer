@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.3.3
+// @version      4.3.4
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://*.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
