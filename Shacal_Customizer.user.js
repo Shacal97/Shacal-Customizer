@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.3.8
+// @version      4.3.8.1
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://*.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
@@ -32,7 +32,7 @@
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
 
     // Wersja i stały kanał aktualizacji Shacal Customizer.
-    const SHACAL_SCRIPT_VERSION = '4.3.8';
+    const SHACAL_SCRIPT_VERSION = '4.3.8.1';
     const SHACAL_UPDATE_URL =
         'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
 
@@ -4168,7 +4168,6 @@
 
             .shacal-upgrade-badge {
                 position: fixed !important;
-                z-index: 1000002 !important;
                 width: 12px;
                 height: 12px;
                 box-sizing: border-box;
@@ -4185,6 +4184,11 @@
                 color: #fff;
                 text-shadow: 0 1px 2px rgba(0,0,0,.95);
                 transform: translate(-1px, 1px);
+                /*
+                 * Badge jest nakładką HUD dla itemu, ale MUSI być pod
+                 * natywnymi dymkami Margonem.
+                 */
+                z-index: 900 !important;
             }
 
             .shacal-upgrade-badge[data-style="1"] {
@@ -4504,6 +4508,11 @@
              */
             .tip-wrapper.normal-tip[data-type="t_item"],
             .tip-wrapper.cmp-tip[data-type="t_item"] {
+                /*
+                 * Dymki muszą być najwyższą warstwą względem naszych
+                 * body-level badge'y poziomu ulepszenia.
+                 */
+                z-index: 2147483000 !important;
                 transform: translateZ(0);
                 backface-visibility: hidden;
                 will-change: left, top;
