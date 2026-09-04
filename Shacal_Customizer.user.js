@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.6.2
+// @version      4.6.3
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
-// @match        https://*.margonem.pl/*
+// @match        https://solphyr.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
 // @updateURL    https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js
 // @downloadURL  https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js
@@ -22,9 +22,15 @@
         return;
     }
 
-    // Forum korzysta z tej samej domeny nadrzędnej, ale nie jest ekranem gry.
-    // Blokada runtime uzupełnia @exclude i zabezpiecza także nietypowe wejścia.
-    if (location.hostname.toLowerCase() === 'forum.margonem.pl') {
+    /*
+     * Shacal Customizer jest przeznaczony wyłącznie dla świata Solphyr.
+     * @match blokuje uruchomienie userscriptu na innych światach,
+     * a ten warunek jest dodatkowym zabezpieczeniem runtime.
+     */
+    if (
+        location.hostname.toLowerCase() !==
+        'solphyr.margonem.pl'
+    ) {
         return;
     }
 
@@ -32,7 +38,7 @@
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
 
     // Wersja i stały kanał aktualizacji Shacal Customizer.
-    const SHACAL_SCRIPT_VERSION = '4.6.2';
+    const SHACAL_SCRIPT_VERSION = '4.6.3';
     const SHACAL_UPDATE_URL =
         'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
 
