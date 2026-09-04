@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.3.8.1
+// @version      4.3.9
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://*.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
@@ -32,7 +32,7 @@
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
 
     // Wersja i stały kanał aktualizacji Shacal Customizer.
-    const SHACAL_SCRIPT_VERSION = '4.3.8.1';
+    const SHACAL_SCRIPT_VERSION = '4.3.9';
     const SHACAL_UPDATE_URL =
         'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
 
@@ -4508,14 +4508,18 @@
              */
             .tip-wrapper.normal-tip[data-type="t_item"],
             .tip-wrapper.cmp-tip[data-type="t_item"] {
-                /*
-                 * Dymki muszą być najwyższą warstwą względem naszych
-                 * body-level badge'y poziomu ulepszenia.
-                 */
-                z-index: 2147483000 !important;
                 transform: translateZ(0);
                 backface-visibility: hidden;
-                will-change: left, top;
+            }
+
+            /*
+             * Natywny tooltip Margonem może siedzieć w osobnym stacking
+             * context, więc samo z-index na dymku nie gwarantuje przewagi
+             * nad body-level badge'ami. Gdy dymek itemu jest widoczny,
+             * chowamy nasze badge'e na czas podglądu.
+             */
+            body.shacal-item-tip-visible .shacal-upgrade-badge {
+                visibility: hidden !important;
             }
 
             ${buildItemRarityFrameCss()}
@@ -5700,10 +5704,59 @@
         );
     }
 
+    let upgradeBadgeTooltipVisibilityQueued = false;
+
+    function isVisibleItemTooltip(element) {
+        if (!(element instanceof Element) || !element.isConnected) {
+            return false;
+        }
+
+        const rect = element.getBoundingClientRect();
+
+        if (rect.width <= 0 || rect.height <= 0) {
+            return false;
+        }
+
+        const style = getComputedStyle(element);
+
+        return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            Number.parseFloat(style.opacity || '1') > 0
+        );
+    }
+
+    function syncUpgradeBadgeTooltipVisibility() {
+        upgradeBadgeTooltipVisibilityQueued = false;
+
+        const visible = [
+            ...document.querySelectorAll(
+                '.tip-wrapper.normal-tip[data-type="t_item"], ' +
+                '.tip-wrapper.cmp-tip[data-type="t_item"]'
+            )
+        ].some(isVisibleItemTooltip);
+
+        document.body.classList.toggle(
+            'shacal-item-tip-visible',
+            visible
+        );
+    }
+
+    function queueUpgradeBadgeTooltipVisibilitySync() {
+        if (upgradeBadgeTooltipVisibilityQueued) return;
+
+        upgradeBadgeTooltipVisibilityQueued = true;
+
+        requestAnimationFrame(
+            syncUpgradeBadgeTooltipVisibility
+        );
+    }
+
     const observer = new MutationObserver(mutations => {
         let shouldSyncUpgradeBadges = false;
         let shouldSyncLootWindows = false;
         let shouldScanLegendaryChat = false;
+        let shouldSyncTooltipVisibility = false;
 
         for (const mutation of mutations) {
             if (mutation.type === 'attributes') {
@@ -5717,6 +5770,18 @@
                     target?.matches?.('.item')
                 ) {
                     shouldSyncUpgradeBadges = true;
+                }
+
+                if (
+                    (
+                        mutation.attributeName === 'style' ||
+                        mutation.attributeName === 'class'
+                    ) &&
+                    target?.matches?.(
+                        '.tip-wrapper.normal-tip, .tip-wrapper.cmp-tip'
+                    )
+                ) {
+                    shouldSyncTooltipVisibility = true;
                 }
 
                 /*
@@ -5766,6 +5831,23 @@
                 ...mutation.addedNodes,
                 ...mutation.removedNodes
             ];
+
+            if (
+                !shouldSyncTooltipVisibility &&
+                (
+                    target?.closest?.(
+                        '.tip-wrapper.normal-tip, .tip-wrapper.cmp-tip'
+                    ) ||
+                    changedNodes.some(node =>
+                        nodeTouchesSelector(
+                            node,
+                            '.tip-wrapper.normal-tip, .tip-wrapper.cmp-tip'
+                        )
+                    )
+                )
+            ) {
+                shouldSyncTooltipVisibility = true;
+            }
 
             if (
                 !shouldSyncUpgradeBadges &&
@@ -5845,6 +5927,10 @@
             queueUpgradeBadgeSync();
         }
 
+        if (shouldSyncTooltipVisibility) {
+            queueUpgradeBadgeTooltipVisibilitySync();
+        }
+
         if (shouldSyncLootWindows) {
             queueLootWindowSync();
         }
@@ -5862,9 +5948,13 @@
             'data-frame-mania-rarity',
             'data-item-type',
             'data-frame-mania-upgrade',
-            'data-upgrade'
+            'data-upgrade',
+            'style',
+            'class'
         ]
     });
+
+    queueUpgradeBadgeTooltipVisibilitySync();
 
     // Pozycję istniejących badge'y odświeżamy lekko tylko przy realnym
     // przesuwaniu/skalowaniu interfejsu, zamiast skanować cały ekwipunek
@@ -5896,28 +5986,38 @@
         capture: true
     });
 
-
-    // Lekka pętla tylko do pozycjonowania już istniejących badge'y.
-    // Nie skanuje DOM-u i nie tworzy nowych elementów, więc nie powoduje
-    // problemu wydajnościowego z v4.1.7, a badge płynnie trzyma się itemu
-    // podczas animacji/przesuwania okien i dymków.
-    function syncUpgradeBadgePositionsFrame() {
-        if (
-            settings.upgradeBadgeEnabled &&
-            upgradeBadgeOverlayMap.size > 0
-        ) {
-            for (const [element, badge] of upgradeBadgeOverlayMap.entries()) {
-                if (
-                    element.isConnected &&
-                    badge.isConnected
-                ) {
-                    positionUpgradeBadgeOverlay(element, badge);
-                }
-            }
+    /*
+     * Gdy użytkownik faktycznie przeciąga okno z itemami, aktualizujemy
+     * badge'e maksymalnie raz na klatkę. Przy zwykłym hoverze nad itemami
+     * nie wykonujemy już żadnego ciągłego pozycjonowania.
+     */
+    window.addEventListener('pointermove', event => {
+        if ((event.buttons & 1) === 1) {
+            queueUpgradeBadgePositionSync();
         }
+    }, {
+        passive: true,
+        capture: true
+    });
 
-        requestAnimationFrame(syncUpgradeBadgePositionsFrame);
-    }
+    window.addEventListener('pointerup', queueUpgradeBadgePositionSync, {
+        passive: true,
+        capture: true
+    });
+
+    window.addEventListener('wheel', queueUpgradeBadgePositionSync, {
+        passive: true,
+        capture: true
+    });
+
+
+    /*
+     * v4.3.9:
+     * Usunięto stałą pętlę requestAnimationFrame dla badge'y.
+     * getBoundingClientRect() + zapis left/top dla każdego itemu w każdej
+     * klatce powodował ciągłe layout/paint nawet wtedy, gdy UI stało.
+     * Pozycje aktualizujemy wyłącznie na realne zdarzenia.
+     */
 
     // =========================================================
     // OKNO PODGLĄDU
@@ -7782,7 +7882,6 @@ function createLegendaryTestWindow() {
     syncUpgradeBadges();
     updateLootWindows();
     requestAnimationFrame(syncAllGlowOverlays);
-    requestAnimationFrame(syncUpgradeBadgePositionsFrame);
     refreshChatEmoticons();
 
 
