@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.3.9
+// @version      4.4.0
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://*.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
@@ -32,7 +32,7 @@
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
 
     // Wersja i stały kanał aktualizacji Shacal Customizer.
-    const SHACAL_SCRIPT_VERSION = '4.3.9';
+    const SHACAL_SCRIPT_VERSION = '4.4.0';
     const SHACAL_UPDATE_URL =
         'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
 
@@ -2680,184 +2680,27 @@
         };
 
         const styleFor = frame => {
-            let { c, g, b, d } = resolveTipPalette(frame);
+            const { c, g, b, d } = resolveTipPalette(frame);
 
-            switch (tipSet) {
-                case 2: // Shadowbound
-                    return `
-                        outline: 1px solid ${d} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${c},
-                            0 0 4px ${b},
-                            0 0 7px ${g},
-                            0 0 14px ${g},
-                            inset 0 0 0 1px rgba(0,0,0,.72) !important;
-                    `;
-                case 3: // Crystal Veil
-                    return `
-                        outline: 1px solid ${b} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 3px ${b},
-                            0 0 9px ${g},
-                            0 0 14px ${g},
-                            inset 0 0 0 1px ${c} !important;
-                    `;
-                case 7: // Royal Crest
-                    return `
-                        outline: 1px solid ${b} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${d},
-                            0 0 7px ${g},
-                            0 0 14px ${g},
-                            inset 0 0 0 1px ${c} !important;
-                    `;
-                case 8: // Hexed Edge
-                    return `
-                        outline: 1px solid ${d} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${c},
-                            0 0 4px ${b},
-                            0 0 10px ${g},
-                            0 0 14px ${g} !important;
-                    `;
-                case 9: // Clean Line
-                    return `
-                        outline: 1px solid ${c} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 2px ${g},
-                            0 0 14px ${g} !important;
-                    `;
-                case 11: // Emberglass
-                    return `
-                        outline: 1px solid ${c} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 5px ${g},
-                            0 0 13px ${g},
-                            inset 0 0 0 1px ${d} !important;
-                    `;
-                case 12: // Abyssal Forge
-                    return `
-                        outline: 1px solid ${d} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${c},
-                            0 0 4px ${b},
-                            0 0 6px ${g},
-                            0 0 13px ${g},
-                            inset 0 0 6px rgba(0,0,0,.38) !important;
-                    `;
-                case 13: // Prismheart
-                    return `
-                        outline: 1px solid ${b} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 4px ${b},
-                            0 0 8px ${g},
-                            0 0 14px ${g} !important;
-                    `;
-                case 14: // Sovereign Core
-                    return `
-                        outline: 1px solid ${c} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${b},
-                            0 0 4px ${b},
-                            0 0 7px ${g},
-                            0 0 14px ${g} !important;
-                    `;
-                case 17: // Nightfall
-                    return `
-                        outline: 1px solid ${d} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${c},
-                            0 0 4px ${b},
-                            0 0 5px ${g},
-                            0 0 13px ${g} !important;
-                    `;
-                case 18: // Void Ember
-                    return `
-                        outline: 1px solid ${c} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 2px ${b},
-                            0 0 8px ${g},
-                            0 0 14px ${g},
-                            inset 0 0 0 1px ${d} !important;
-                    `;
-                case 19: // Blackthorn
-                    return `
-                        outline: 1px solid ${d} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${c},
-                            0 0 4px ${b},
-                            0 0 4px ${g},
-                            0 0 24px ${g} !important;
-                    `;
-                case 28: // Arcane Glass
-                    return `
-                        outline: 1px solid ${c} !important;
-                        outline-offset: 0 !important;
-                        border-radius: 1px !important;
-                        background-image:
-                            linear-gradient(135deg, rgba(255,255,255,.025), transparent 24%, transparent 78%, rgba(255,255,255,.015)) !important;
-                        box-shadow:
-                            0 0 0 1px ${d},
-                            0 0 3px ${g},
-                            0 0 12px ${g},
-                            inset 0 0 5px ${g} !important;
-                    `;
-                case 29: // Arcane Stone
-                    return `
-                        outline: 1px solid ${d} !important;
-                        outline-offset: 0 !important;
-                        border-radius: 2px !important;
-                        background-image:
-                            radial-gradient(circle at 50% 45%, ${g}, transparent 68%),
-                            linear-gradient(145deg, rgba(255,255,255,.012), rgba(0,0,0,.14)) !important;
-                        box-shadow:
-                            0 0 0 1px ${c},
-                            0 0 3px ${g},
-                            0 0 11px ${g},
-                            inset 0 0 0 1px rgba(0,0,0,.64),
-                            inset 0 0 6px ${g} !important;
-                    `;
-                case 20: // Crimson Oath
-                case 21: // Infernal Crown
-                case 22: // Molten Core
-                case 23: // Blood Moon
-                case 24: // Dragonfire
-                case 25: // Toxic Flame
-                case 26: // Royal Ember
-                case 27: // Blood Eclipse
-                    return `
-                        outline: 1px solid ${b} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 0 1px ${c},
-                            0 0 4px ${b},
-                            0 0 6px ${g},
-                            0 0 13px ${g},
-                            inset 0 0 0 1px ${d} !important;
-                    `;
-                case 1:
-                default: // Classic Glow
-                    return `
-                        outline: 1px solid ${c} !important;
-                        outline-offset: 0 !important;
-                        box-shadow:
-                            0 0 6px ${g},
-                            0 0 13px ${g},
-                            inset 0 0 0 1px ${d} !important;
-                    `;
-            }
+            /*
+             * v4.4.0:
+             * Kolorowanie ramek dymków wraca w pełni według rangi/palety,
+             * ale bez wielowarstwowych 10–30 px box-shadowów.
+             * To właśnie one są bardzo kosztowne podczas ciągłego
+             * przesuwania tooltipa przez silnik Margonem.
+             */
+            const glowCss =
+                settings.itemTipOuterGlow
+                    ? `0 0 5px ${g}, `
+                    : '';
+
+            return `
+                outline: 1px solid ${b} !important;
+                outline-offset: 0 !important;
+                box-shadow:
+                    ${glowCss}
+                    inset 0 0 0 1px ${d} !important;
+            `;
         };
 
         const textStyleFor = frame => {
@@ -2886,21 +2729,6 @@
             `;
         };
 
-        const outerGlowOffCss = frame => {
-            if (settings.itemTipOuterGlow) {
-                return '';
-            }
-
-            let { c, g, b, d } = resolveTipPalette(frame);
-
-            return `
-                box-shadow:
-                    0 0 0 1px ${c},
-                            0 0 4px ${b},
-                    inset 0 0 0 1px ${d} !important;
-            `;
-        };
-
         return rarities
             .filter(frame => frame.enabled)
             .map(frame => {
@@ -2914,7 +2742,6 @@
                     ${normalRoot},
                     ${comparisonRoot} {
                         ${styleFor(frame)}
-                        ${outerGlowOffCss(frame)}
                     }
 
                     ${normalRoot} .tip-item-stat-item-name,
@@ -3769,7 +3596,7 @@
             }
 
             .shacal-test-loot-window {
-                position: fixed !important;
+                position: absolute !important;
                 left: 50% !important;
                 top: 50% !important;
                 transform: translate(-50%, -50%) !important;
@@ -4166,6 +3993,10 @@
             #shacal-glow-panel .rarity-row.artifact { color: #b27cff; opacity: .48; }
 
 
+            .shacal-upgrade-badge-host {
+                position: relative !important;
+            }
+
             .shacal-upgrade-badge {
                 position: fixed !important;
                 width: 12px;
@@ -4185,10 +4016,10 @@
                 text-shadow: 0 1px 2px rgba(0,0,0,.95);
                 transform: translate(-1px, 1px);
                 /*
-                 * Badge jest nakładką HUD dla itemu, ale MUSI być pod
-                 * natywnymi dymkami Margonem.
+                 * Lokalna warstwa itemu: ponad canvasem/ramką przedmiotu,
+                 * ale poniżej globalnego dymku Margonem.
                  */
-                z-index: 900 !important;
+                z-index: 20 !important;
             }
 
             .shacal-upgrade-badge[data-style="1"] {
@@ -4506,22 +4337,6 @@
              * Osobna warstwa kompozytora + ograniczenie pracy paint pomaga
              * szczególnie przy dwóch dymkach porównania naraz.
              */
-            .tip-wrapper.normal-tip[data-type="t_item"],
-            .tip-wrapper.cmp-tip[data-type="t_item"] {
-                transform: translateZ(0);
-                backface-visibility: hidden;
-            }
-
-            /*
-             * Natywny tooltip Margonem może siedzieć w osobnym stacking
-             * context, więc samo z-index na dymku nie gwarantuje przewagi
-             * nad body-level badge'ami. Gdy dymek itemu jest widoczny,
-             * chowamy nasze badge'e na czas podglądu.
-             */
-            body.shacal-item-tip-visible .shacal-upgrade-badge {
-                visibility: hidden !important;
-            }
-
             ${buildItemRarityFrameCss()}
             ${buildItemTipCss()}
             ${buildItemTipFontCss()}
@@ -5538,27 +5353,56 @@
     function ensureUpgradeBadgeOverlay(element) {
         let badge = upgradeBadgeOverlayMap.get(element);
 
+        const host =
+            element.parentElement;
+
+        if (!host) {
+            return null;
+        }
+
+        host.classList.add(
+            'shacal-upgrade-badge-host'
+        );
+
         if (!badge) {
             badge = document.createElement('div');
             badge.className = 'shacal-upgrade-badge';
             badge.setAttribute('aria-hidden', 'true');
-            document.body.appendChild(badge);
+            host.appendChild(badge);
             upgradeBadgeOverlayMap.set(element, badge);
+        } else if (badge.parentElement !== host) {
+            host.appendChild(badge);
         }
 
         return badge;
     }
 
     function positionUpgradeBadgeOverlay(element, badge) {
-        const rect = element.getBoundingClientRect();
+        if (
+            !(element instanceof Element) ||
+            !(badge instanceof Element) ||
+            !element.isConnected ||
+            !badge.isConnected
+        ) {
+            return;
+        }
+
+        const host =
+            badge.parentElement;
+
+        if (!host) {
+            return;
+        }
+
+        const rect =
+            element.getBoundingClientRect();
+
+        const hostRect =
+            host.getBoundingClientRect();
 
         if (
             rect.width <= 0 ||
-            rect.height <= 0 ||
-            rect.bottom < 0 ||
-            rect.right < 0 ||
-            rect.top > window.innerHeight ||
-            rect.left > window.innerWidth
+            rect.height <= 0
         ) {
             badge.style.display = 'none';
             return;
@@ -5566,7 +5410,8 @@
 
         badge.style.display = 'flex';
 
-        const style = Number(settings.upgradeBadgeStyle) || 1;
+        const style =
+            Number(settings.upgradeBadgeStyle) || 1;
 
         const badgeSizes = {
             1: [12, 12],
@@ -5587,16 +5432,30 @@
             16: [10, 10]
         };
 
-        const [badgeWidth, badgeHeight] =
+        const [badgeWidth] =
             badgeSizes[style] || badgeSizes[1];
 
-        // Nakładka jest przyklejona do prawego górnego rogu samego itemu,
-        // ale żyje bezpośrednio w body, więc gra nie może jej schować
-        // pod canvasem, highlightem ani ramką slotu.
+        /*
+         * Współrzędne względem rodzica itemu.
+         * Badge nie żyje już w body, więc nie może wejść nad
+         * globalny tooltip. Nadal siedzi nad samym itemem.
+         */
         badge.style.left =
-            `${Math.round(rect.right - badgeWidth + 2)}px`;
+            `${Math.round(
+                rect.right -
+                hostRect.left -
+                badgeWidth +
+                host.scrollLeft +
+                2
+            )}px`;
+
         badge.style.top =
-            `${Math.round(rect.top - 2)}px`;
+            `${Math.round(
+                rect.top -
+                hostRect.top +
+                host.scrollTop -
+                2
+            )}px`;
     }
 
     function syncUpgradeBadges() {
@@ -5620,6 +5479,11 @@
                     validElements.add(element);
 
                     const badge = ensureUpgradeBadgeOverlay(element);
+
+                    if (!badge) {
+                        return;
+                    }
+
                     badge.dataset.style =
                         String(settings.upgradeBadgeStyle);
                     badge.textContent =
@@ -5704,59 +5568,10 @@
         );
     }
 
-    let upgradeBadgeTooltipVisibilityQueued = false;
-
-    function isVisibleItemTooltip(element) {
-        if (!(element instanceof Element) || !element.isConnected) {
-            return false;
-        }
-
-        const rect = element.getBoundingClientRect();
-
-        if (rect.width <= 0 || rect.height <= 0) {
-            return false;
-        }
-
-        const style = getComputedStyle(element);
-
-        return (
-            style.display !== 'none' &&
-            style.visibility !== 'hidden' &&
-            Number.parseFloat(style.opacity || '1') > 0
-        );
-    }
-
-    function syncUpgradeBadgeTooltipVisibility() {
-        upgradeBadgeTooltipVisibilityQueued = false;
-
-        const visible = [
-            ...document.querySelectorAll(
-                '.tip-wrapper.normal-tip[data-type="t_item"], ' +
-                '.tip-wrapper.cmp-tip[data-type="t_item"]'
-            )
-        ].some(isVisibleItemTooltip);
-
-        document.body.classList.toggle(
-            'shacal-item-tip-visible',
-            visible
-        );
-    }
-
-    function queueUpgradeBadgeTooltipVisibilitySync() {
-        if (upgradeBadgeTooltipVisibilityQueued) return;
-
-        upgradeBadgeTooltipVisibilityQueued = true;
-
-        requestAnimationFrame(
-            syncUpgradeBadgeTooltipVisibility
-        );
-    }
-
     const observer = new MutationObserver(mutations => {
         let shouldSyncUpgradeBadges = false;
         let shouldSyncLootWindows = false;
         let shouldScanLegendaryChat = false;
-        let shouldSyncTooltipVisibility = false;
 
         for (const mutation of mutations) {
             if (mutation.type === 'attributes') {
@@ -5770,18 +5585,6 @@
                     target?.matches?.('.item')
                 ) {
                     shouldSyncUpgradeBadges = true;
-                }
-
-                if (
-                    (
-                        mutation.attributeName === 'style' ||
-                        mutation.attributeName === 'class'
-                    ) &&
-                    target?.matches?.(
-                        '.tip-wrapper.normal-tip, .tip-wrapper.cmp-tip'
-                    )
-                ) {
-                    shouldSyncTooltipVisibility = true;
                 }
 
                 /*
@@ -5831,23 +5634,6 @@
                 ...mutation.addedNodes,
                 ...mutation.removedNodes
             ];
-
-            if (
-                !shouldSyncTooltipVisibility &&
-                (
-                    target?.closest?.(
-                        '.tip-wrapper.normal-tip, .tip-wrapper.cmp-tip'
-                    ) ||
-                    changedNodes.some(node =>
-                        nodeTouchesSelector(
-                            node,
-                            '.tip-wrapper.normal-tip, .tip-wrapper.cmp-tip'
-                        )
-                    )
-                )
-            ) {
-                shouldSyncTooltipVisibility = true;
-            }
 
             if (
                 !shouldSyncUpgradeBadges &&
@@ -5927,10 +5713,6 @@
             queueUpgradeBadgeSync();
         }
 
-        if (shouldSyncTooltipVisibility) {
-            queueUpgradeBadgeTooltipVisibilitySync();
-        }
-
         if (shouldSyncLootWindows) {
             queueLootWindowSync();
         }
@@ -5948,13 +5730,9 @@
             'data-frame-mania-rarity',
             'data-item-type',
             'data-frame-mania-upgrade',
-            'data-upgrade',
-            'style',
-            'class'
+            'data-upgrade'
         ]
     });
-
-    queueUpgradeBadgeTooltipVisibilitySync();
 
     // Pozycję istniejących badge'y odświeżamy lekko tylko przy realnym
     // przesuwaniu/skalowaniu interfejsu, zamiast skanować cały ekwipunek
@@ -6004,12 +5782,6 @@
         passive: true,
         capture: true
     });
-
-    window.addEventListener('wheel', queueUpgradeBadgePositionSync, {
-        passive: true,
-        capture: true
-    });
-
 
     /*
      * v4.3.9:
