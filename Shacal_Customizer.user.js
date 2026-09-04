@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.6.3
+// @version      4.9.2
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://solphyr.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
@@ -38,7 +38,7 @@
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
 
     // Wersja i stały kanał aktualizacji Shacal Customizer.
-    const SHACAL_SCRIPT_VERSION = '4.6.3';
+    const SHACAL_SCRIPT_VERSION = '4.9.2';
     const SHACAL_UPDATE_URL =
         'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
 
@@ -108,6 +108,7 @@
 
     const STYLE_CLASSIC = 1;
     const STYLE_NEON_80S = 2;
+    const STYLE_INNER_AURA = 3;
 
     const EFFECT_NONE = 0;
     const EFFECT_PULSE = 1;
@@ -126,10 +127,19 @@
             ...rawSettings
         };
 
-        normalized.glowStyle =
-            Number(normalized.glowStyle) === STYLE_NEON_80S
-                ? STYLE_NEON_80S
-                : STYLE_CLASSIC;
+        {
+            const requestedGlowStyle =
+                Number(normalized.glowStyle);
+
+            normalized.glowStyle =
+                [
+                    STYLE_CLASSIC,
+                    STYLE_NEON_80S,
+                    STYLE_INNER_AURA
+                ].includes(requestedGlowStyle)
+                    ? requestedGlowStyle
+                    : STYLE_CLASSIC;
+        }
 
         normalized.dropMode =
             normalized.dropMode === DROP_MODE_LEGENDARY
@@ -186,7 +196,7 @@
             Math.max(
                 0,
                 Math.min(
-                    10,
+                    18,
                     Number(normalized.sound) || 0
                 )
             );
@@ -879,6 +889,125 @@
             : 'none';
     }
 
+    function getInnerAuraParams(multiplier = 1) {
+        const level =
+            internalLevel(clampLevel(settings.glow1));
+
+        const width =
+            spatialLevel(clampLevel(settings.width1));
+
+        const opacity =
+            opacityLevel(settings.opacity1);
+
+        const color =
+            settings.color1;
+
+        if (
+            clampLevel(settings.glow1) <= 0 ||
+            clampLevel(settings.width1) <= 0 ||
+            opacity <= 0
+        ) {
+            return null;
+        }
+
+        const strength =
+            Math.min(
+                1,
+                opacity * (0.78 + level * 0.03)
+            );
+
+        const tightBlur =
+            Math.max(
+                3,
+                Math.round(
+                    (4 + level * 0.55 + width * 0.75) *
+                    multiplier
+                )
+            );
+
+        const mediumBlur =
+            Math.max(
+                12,
+                Math.round(
+                    (18 + level * 1.15 + width * 2.4) *
+                    multiplier
+                )
+            );
+
+        const softBlur =
+            Math.max(
+                24,
+                Math.round(
+                    (38 + level * 1.65 + width * 4.6) *
+                    multiplier
+                )
+            );
+
+        const tightSpread =
+            Math.min(
+                2.5,
+                (0.15 + width * 0.16) * multiplier
+            );
+
+        const mediumSpread =
+            Math.min(
+                9,
+                (1.0 + width * 0.52) * multiplier
+            );
+
+        const softSpread =
+            Math.min(
+                15,
+                (1.5 + width * 0.78) * multiplier
+            );
+
+        return {
+            color,
+            strength,
+            tightBlur,
+            mediumBlur,
+            softBlur,
+            tightSpread,
+            mediumSpread,
+            softSpread
+        };
+    }
+
+    function buildInnerAuraLootShadow(multiplier = 1) {
+        const aura =
+            getInnerAuraParams(multiplier);
+
+        if (!aura) {
+            return 'none';
+        }
+
+        return [
+            `0 0 ${aura.tightBlur}px ${aura.tightSpread.toFixed(1)}px ${hexToRgba(aura.color, Math.min(1, aura.strength * 0.95))}`,
+            `0 0 ${aura.mediumBlur}px ${aura.mediumSpread.toFixed(1)}px ${hexToRgba(aura.color, Math.min(0.72, aura.strength * 0.55))}`,
+            `0 0 ${aura.softBlur}px ${aura.softSpread.toFixed(1)}px ${hexToRgba(aura.color, Math.min(0.34, aura.strength * 0.24))}`
+        ].join(', ');
+    }
+
+    function buildInnerAuraMapShadow(multiplier = 1) {
+        const aura =
+            getInnerAuraParams(multiplier);
+
+        if (!aura) {
+            return 'none';
+        }
+
+        /*
+         * Tylko inset.
+         * Żaden fragment tej poświaty nie wychodzi poza okno gry.
+         */
+        return [
+            `inset 0 0 ${aura.tightBlur}px ${aura.tightSpread.toFixed(1)}px ${hexToRgba(aura.color, Math.min(1, aura.strength * 0.90))}`,
+            `inset 0 0 ${aura.mediumBlur}px ${aura.mediumSpread.toFixed(1)}px ${hexToRgba(aura.color, Math.min(0.66, aura.strength * 0.50))}`,
+            `inset 0 0 ${aura.softBlur}px ${aura.softSpread.toFixed(1)}px ${hexToRgba(aura.color, Math.min(0.30, aura.strength * 0.20))}`
+        ].join(', ');
+    }
+
+
     function buildRetroNeonShadow(multiplier = 1, colorOverride = null) {
         const colors = Array.isArray(colorOverride)
             ? colorOverride
@@ -1154,6 +1283,22 @@
         );
     }
 
+
+    function hasGlowForCurrentStyle() {
+        if (
+            Number(settings.glowStyle) ===
+            STYLE_INNER_AURA
+        ) {
+            return (
+                clampLevel(settings.glow1) > 0 &&
+                opacityLevel(settings.opacity1) > 0 &&
+                clampLevel(settings.width1) > 0
+            );
+        }
+
+        return hasAnyGlowLayer();
+    }
+
     function ensureGlowOverlay(windowElement) {
         let overlay = glowOverlayMap.get(windowElement);
 
@@ -1186,10 +1331,37 @@
     function positionGlowOverlay(windowElement, overlay) {
         const rect = windowElement.getBoundingClientRect();
 
-        overlay.style.left = `${rect.left}px`;
-        overlay.style.top = `${rect.top}px`;
-        overlay.style.width = `${rect.width}px`;
-        overlay.style.height = `${rect.height}px`;
+        const currentGlowStyle =
+            Number(settings.glowStyle) ||
+            STYLE_CLASSIC;
+
+        const useLootFrameInset =
+            currentGlowStyle === STYLE_CLASSIC ||
+            currentGlowStyle === STYLE_INNER_AURA;
+
+        /*
+         * Grafika okna łupu ma przezroczysty margines.
+         * Klasyczna i Inner Aura mają ten sam korektor:
+         * X = 8px po bokach, Y = 4px góra/dół.
+         * Neon 80s pozostaje bez zmian.
+         */
+        const insetX =
+            useLootFrameInset ? 8 : 0;
+
+        const insetY =
+            useLootFrameInset ? 4 : 0;
+
+        overlay.style.left =
+            `${rect.left + insetX}px`;
+
+        overlay.style.top =
+            `${rect.top + insetY}px`;
+
+        overlay.style.width =
+            `${Math.max(0, rect.width - insetX * 2)}px`;
+
+        overlay.style.height =
+            `${Math.max(0, rect.height - insetY * 2)}px`;
 
         /*
          * Glow musi zawsze znajdować się ZA konkretnym oknem lootu.
@@ -1850,16 +2022,169 @@
         }
     }
 
-    function syncMapGlowOverlay() {
+    function applyInnerAuraMapAnimation(overlay) {
+        const pulse = getPulseConfig();
+
         /*
-         * Duży neon mapy jest częścią wyłącznie stylu Neon 80s.
-         * Pojawia się tylko wtedy, gdy istnieje aktywny loot
-         * objęty efektem.
+         * Inner Aura obsługuje:
+         * 0 Brak
+         * 1 Pulsowanie
+         * 2 Magiczne migotanie
+         * 3 Wędrujące kolory — zablokowane w panelu.
          */
+        const effect = Math.max(
+            0,
+            Math.min(
+                EFFECT_MAGIC_FLICKER,
+                Number(settings.effect) || 0
+            )
+        );
+
+        const pulseMultiplier = {
+            0: 1,
+            1: 1.08,
+            2: 1.16,
+            3: 1.26,
+            4: 1.38,
+            5: 1.52
+        }[clampLevel(settings.pulse)];
+
+        const baseShadow =
+            buildInnerAuraMapShadow(1);
+
+        const peakShadow =
+            buildInnerAuraMapShadow(
+                pulseMultiplier
+            );
+
+        const softShadow =
+            buildInnerAuraMapShadow(
+                1 +
+                (pulseMultiplier - 1) * 0.45
+            );
+
+        const signature =
+            JSON.stringify({
+                color: settings.color1,
+                glow: settings.glow1,
+                opacity: settings.opacity1,
+                width: settings.width1,
+                effect,
+                enabled: pulse.enabled,
+                duration: pulse.duration,
+                baseShadow,
+                peakShadow,
+                softShadow
+            });
+
         if (
-            Number(settings.glowStyle) !== 2 ||
+            overlay.dataset
+                .shacalInnerAuraSignature ===
+            signature
+        ) {
+            return;
+        }
+
+        overlay
+            .getAnimations()
+            .forEach(animation =>
+                animation.cancel()
+            );
+
+        overlay.dataset
+            .shacalInnerAuraSignature =
+            signature;
+
+        overlay.style.boxShadow =
+            baseShadow;
+        overlay.style.opacity = '1';
+        overlay.style.transform = 'scale(1)';
+        overlay.style.filter = 'none';
+
+        if (!pulse.enabled || effect === 0) {
+            return;
+        }
+
+        const halfDuration =
+            (pulse.duration * 1000) / 2;
+
+        if (effect === EFFECT_PULSE) {
+            overlay.animate(
+                [
+                    {
+                        boxShadow: baseShadow,
+                        opacity: 1
+                    },
+                    {
+                        boxShadow: peakShadow,
+                        opacity: 0.94
+                    }
+                ],
+                {
+                    duration: halfDuration,
+                    iterations: Infinity,
+                    direction: 'alternate',
+                    easing:
+                        'cubic-bezier(0.42, 0, 0.58, 1)'
+                }
+            );
+        }
+
+        if (effect === EFFECT_MAGIC_FLICKER) {
+            overlay.animate(
+                [
+                    {
+                        boxShadow: baseShadow,
+                        opacity: 0.94
+                    },
+                    {
+                        boxShadow: softShadow,
+                        opacity: 1,
+                        offset: 0.17
+                    },
+                    {
+                        boxShadow: baseShadow,
+                        opacity: 0.90,
+                        offset: 0.36
+                    },
+                    {
+                        boxShadow: peakShadow,
+                        opacity: 1,
+                        offset: 0.58
+                    },
+                    {
+                        boxShadow: softShadow,
+                        opacity: 0.93,
+                        offset: 0.79
+                    },
+                    {
+                        boxShadow: baseShadow,
+                        opacity: 0.97
+                    }
+                ],
+                {
+                    duration:
+                        pulse.duration * 1000,
+                    iterations: Infinity,
+                    easing: 'ease-in-out'
+                }
+            );
+        }
+    }
+
+
+    function syncMapGlowOverlay() {
+        const style =
+            Number(settings.glowStyle) ||
+            STYLE_CLASSIC;
+
+        if (
+            ![
+                STYLE_NEON_80S,
+                STYLE_INNER_AURA
+            ].includes(style) ||
             !settings.enabled ||
-            !hasAnyGlowLayer()
+            !hasGlowForCurrentStyle()
         ) {
             removeMapGlowOverlay();
             return;
@@ -1890,7 +2215,27 @@
             activeLootWindows
         );
 
-        applyMapGlowAnimation(overlay);
+        if (style === STYLE_INNER_AURA) {
+            /*
+             * Inner Aura = bez białej rurki, tylko poświata do środka.
+             */
+            overlay.style.border =
+                '0 solid transparent';
+
+            applyInnerAuraMapAnimation(
+                overlay
+            );
+        } else {
+            /*
+             * Neon 80s — dokładnie stary mechanizm.
+             */
+            overlay.style.border =
+                '2px solid rgba(255,255,255,0.98)';
+
+            applyMapGlowAnimation(
+                overlay
+            );
+        }
     }
 
     function applyGlowToWindow(windowElement) {
@@ -1919,7 +2264,7 @@
         if (
             !settings.enabled ||
             !targetLoot ||
-            !hasAnyGlowLayer()
+            !hasGlowForCurrentStyle()
         ) {
             removeGlowOverlay(windowElement);
             return;
@@ -1935,20 +2280,41 @@
             Math.min(3, Number(settings.effect) || 0)
         );
 
+        const currentGlowStyle =
+            Number(settings.glowStyle) ||
+            STYLE_CLASSIC;
+
         overlay.classList.add('shacal-glow-neon');
         overlay.classList.remove('shacal-glow-classic');
 
         overlay.style.outline = 'none';
 
         const shadowBuilder =
-            Number(settings.glowStyle) === 2
+            currentGlowStyle === STYLE_NEON_80S
                 ? buildRetroNeonShadow
-                : buildNeonShadow;
+                : (
+                    currentGlowStyle === STYLE_INNER_AURA
+                        ? buildInnerAuraLootShadow
+                        : buildNeonShadow
+                );
 
         const baseShadow = shadowBuilder(1);
 
-        ensureItemGlowOverlays(windowElement);
-        syncItemGlowAnimations(windowElement);
+        if (
+            currentGlowStyle ===
+            STYLE_INNER_AURA
+        ) {
+            removeItemGlowOverlays(
+                windowElement
+            );
+        } else {
+            ensureItemGlowOverlays(
+                windowElement
+            );
+            syncItemGlowAnimations(
+                windowElement
+            );
+        }
 
         const pulseMultiplier = {
             0: 1,
@@ -1995,15 +2361,21 @@
         ];
 
         const movingShadowA =
-            shadowBuilder(1, movingColorsA);
+            currentGlowStyle === STYLE_INNER_AURA
+                ? shadowBuilder(1)
+                : shadowBuilder(1, movingColorsA);
         const movingShadowB =
-            shadowBuilder(1, movingColorsB);
+            currentGlowStyle === STYLE_INNER_AURA
+                ? shadowBuilder(1)
+                : shadowBuilder(1, movingColorsB);
         const movingShadowC =
-            shadowBuilder(1, movingColorsC);
+            currentGlowStyle === STYLE_INNER_AURA
+                ? shadowBuilder(1)
+                : shadowBuilder(1, movingColorsC);
 
         const mainColor = getMainNeonColor();
 
-        if (Number(settings.glowStyle) === 2) {
+        if (currentGlowStyle === STYLE_NEON_80S) {
             /*
              * Neonowa "rurka" jak na referencji:
              * cienki jasny rdzeń + kolorowa linia przy oknie,
@@ -2016,6 +2388,19 @@
             overlay.style.borderImageOutset = '';
             overlay.style.border =
                 `2px solid rgba(255,255,255,0.98)`;
+        } else if (
+            currentGlowStyle ===
+            STYLE_INNER_AURA
+        ) {
+            overlay.style.background =
+                'transparent';
+            overlay.style.borderImageSource =
+                'none';
+            overlay.style.borderImageSlice = '';
+            overlay.style.borderImageWidth = '';
+            overlay.style.borderImageOutset = '';
+            overlay.style.border =
+                '0 solid transparent';
         } else {
             overlay.style.background = 'transparent';
             overlay.style.borderImageSource = 'none';
@@ -4744,6 +5129,87 @@
                 border-radius: 7px;
             }
 
+            #shacal-glow-panel .sg-save-footer {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 11px 14px 13px;
+                border-top:
+                    1px solid rgba(55, 224, 214, .14);
+                background:
+                    linear-gradient(
+                        180deg,
+                        rgba(8, 17, 21, .99),
+                        rgba(5, 12, 16, .99)
+                    );
+            }
+
+            #shacal-glow-panel .sg-save-settings {
+                flex: 0 0 160px;
+                height: 36px;
+                border:
+                    1px solid rgba(54, 221, 210, .72);
+                border-radius: 7px;
+                background:
+                    linear-gradient(
+                        135deg,
+                        rgba(14, 83, 85, .98),
+                        rgba(10, 58, 66, .98) 55%,
+                        rgba(68, 31, 91, .98)
+                    );
+                color: #e9fffd;
+                font: inherit;
+                font-size: 11px;
+                font-weight: 900;
+                letter-spacing: .75px;
+                cursor: pointer;
+                box-shadow:
+                    inset 0 0 10px rgba(59, 236, 221, .06),
+                    0 0 8px rgba(44, 211, 201, .08);
+                transition:
+                    transform .12s ease,
+                    border-color .12s ease,
+                    box-shadow .12s ease;
+            }
+
+            #shacal-glow-panel .sg-save-settings:hover {
+                transform: translateY(-1px);
+                border-color:
+                    rgba(88, 248, 234, .96);
+                box-shadow:
+                    inset 0 0 11px rgba(59, 236, 221, .10),
+                    0 0 13px rgba(44, 211, 201, .18),
+                    0 0 8px rgba(144, 64, 190, .12);
+            }
+
+            #shacal-glow-panel .sg-save-settings.sg-save-pending {
+                border-color:
+                    rgba(171, 79, 214, .94);
+                background:
+                    linear-gradient(
+                        135deg,
+                        rgba(13, 80, 83, .98),
+                        rgba(59, 35, 86, .98) 68%,
+                        rgba(105, 42, 130, .98)
+                    );
+                box-shadow:
+                    inset 0 0 10px rgba(59, 236, 221, .07),
+                    0 0 14px rgba(157, 67, 201, .20);
+            }
+
+            #shacal-glow-panel .sg-save-hint {
+                flex: 1;
+                color: #748a90;
+                font-size: 9px;
+                line-height: 1.3;
+            }
+
+            #shacal-glow-panel #sg-test:disabled {
+                opacity: .42;
+                cursor: not-allowed;
+                filter: grayscale(.35);
+            }
+
             @media (max-width: 760px) {
                 #shacal-glow-panel {
                     width: min(470px, calc(100vw - 20px));
@@ -6980,10 +7446,106 @@ function createLegendaryTestWindow() {
         }
     }
 
+    let panelDraftSettings = null;
+    let panelDraftDirty = false;
+
+    function resetPanelDraftSettings() {
+        panelDraftSettings =
+            normalizeSettings({
+                ...settings
+            });
+
+        panelDraftDirty = false;
+    }
+
+    function updateSaveButtonState(panel) {
+        const button =
+            panel?.querySelector?.(
+                '#sg-save-settings'
+            );
+
+        const testButton =
+            panel?.querySelector?.(
+                '#sg-test'
+            );
+
+        if (button) {
+            button.classList.toggle(
+                'sg-save-pending',
+                panelDraftDirty
+            );
+
+            button.textContent =
+                panelDraftDirty
+                    ? 'ZAPISZ ZMIANY'
+                    : 'ZAPISZ';
+        }
+
+        if (testButton) {
+            testButton.disabled =
+                panelDraftDirty;
+
+            testButton.title =
+                panelDraftDirty
+                    ? 'Najpierw zapisz zmiany'
+                    : 'Otwórz podgląd ustawień';
+        }
+    }
+
+    function markPanelDraftDirty(panel) {
+        panelDraftDirty = true;
+        updateSaveButtonState(panel);
+    }
+
+    function commitPanelDraftSettings(panel) {
+        Object.assign(
+            settings,
+            normalizeSettings({
+                ...panelDraftSettings
+            })
+        );
+
+        /*
+         * Jedyny moment, w którym ustawienia panelu stają się aktywne.
+         */
+        saveSettings();
+
+        panelDraftSettings =
+            normalizeSettings({
+                ...settings
+            });
+
+        panelDraftDirty = false;
+        updateSaveButtonState(panel);
+
+        const button =
+            panel?.querySelector?.(
+                '#sg-save-settings'
+            );
+
+        if (button) {
+            button.textContent =
+                'ZAPISANO ✓';
+
+            setTimeout(() => {
+                if (
+                    button.isConnected &&
+                    !panelDraftDirty
+                ) {
+                    button.textContent =
+                        'ZAPISZ';
+                }
+            }, 900);
+        }
+    }
+
+
     function createPanel() {
         if (document.getElementById('shacal-glow-panel')) {
             return;
         }
+
+        resetPanelDraftSettings();
 
         const panel = document.createElement('div');
         panel.id = 'shacal-glow-panel';
@@ -7039,7 +7601,7 @@ function createLegendaryTestWindow() {
                         <input
                             id="sg-enabled"
                             type="checkbox"
-                            ${settings.enabled ? 'checked' : ''}
+                            ${panelDraftSettings.enabled ? 'checked' : ''}
                         >
                     </div>
                 </div>
@@ -7052,7 +7614,7 @@ function createLegendaryTestWindow() {
                             <input
                                 id="sg-mode-normal"
                                 type="checkbox"
-                                ${settings.dropMode === DROP_MODE_NORMAL ? 'checked' : ''}
+                                ${panelDraftSettings.dropMode === DROP_MODE_NORMAL ? 'checked' : ''}
                             >
                             <span>ZWYKŁY TEST</span>
                         </label>
@@ -7061,7 +7623,7 @@ function createLegendaryTestWindow() {
                             <input
                                 id="sg-mode-legendary"
                                 type="checkbox"
-                                ${settings.dropMode === DROP_MODE_LEGENDARY ? 'checked' : ''}
+                                ${panelDraftSettings.dropMode === DROP_MODE_LEGENDARY ? 'checked' : ''}
                             >
                             <span>LEGENDARY</span>
                         </label>
@@ -7083,7 +7645,7 @@ function createLegendaryTestWindow() {
                                 <input
                                     id="sg-color1"
                                     type="color"
-                                    value="${settings.color1}"
+                                    value="${panelDraftSettings.color1}"
                                     title="Kolor 1"
                                 >
                             </div>
@@ -7096,9 +7658,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.glow1}"
+                                    value="${panelDraftSettings.glow1}"
                                 >
-                                <span class="value" id="sg-glow1-value">${settings.glow1}</span>
+                                <span class="value" id="sg-glow1-value">${panelDraftSettings.glow1}</span>
                             </div>
 
                             <div class="row">
@@ -7109,9 +7671,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.opacity1}"
+                                    value="${panelDraftSettings.opacity1}"
                                 >
-                                <span class="value" id="sg-opacity1-value">${settings.opacity1}</span>
+                                <span class="value" id="sg-opacity1-value">${panelDraftSettings.opacity1}</span>
                             </div>
 
                             <div class="row">
@@ -7122,9 +7684,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.width1}"
+                                    value="${panelDraftSettings.width1}"
                                 >
-                                <span class="value" id="sg-width1-value">${settings.width1}</span>
+                                <span class="value" id="sg-width1-value">${panelDraftSettings.width1}</span>
                             </div>
                         </div>
 
@@ -7138,7 +7700,7 @@ function createLegendaryTestWindow() {
                                 <input
                                     id="sg-color2"
                                     type="color"
-                                    value="${settings.color2}"
+                                    value="${panelDraftSettings.color2}"
                                     title="Kolor 2"
                                 >
                             </div>
@@ -7151,9 +7713,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.glow2}"
+                                    value="${panelDraftSettings.glow2}"
                                 >
-                                <span class="value" id="sg-glow2-value">${settings.glow2}</span>
+                                <span class="value" id="sg-glow2-value">${panelDraftSettings.glow2}</span>
                             </div>
 
                             <div class="row">
@@ -7164,9 +7726,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.opacity2}"
+                                    value="${panelDraftSettings.opacity2}"
                                 >
-                                <span class="value" id="sg-opacity2-value">${settings.opacity2}</span>
+                                <span class="value" id="sg-opacity2-value">${panelDraftSettings.opacity2}</span>
                             </div>
 
                             <div class="row">
@@ -7177,9 +7739,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.width2}"
+                                    value="${panelDraftSettings.width2}"
                                 >
-                                <span class="value" id="sg-width2-value">${settings.width2}</span>
+                                <span class="value" id="sg-width2-value">${panelDraftSettings.width2}</span>
                             </div>
                         </div>
 
@@ -7193,7 +7755,7 @@ function createLegendaryTestWindow() {
                                 <input
                                     id="sg-color3"
                                     type="color"
-                                    value="${settings.color3}"
+                                    value="${panelDraftSettings.color3}"
                                     title="Kolor 3"
                                 >
                             </div>
@@ -7206,9 +7768,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.glow3}"
+                                    value="${panelDraftSettings.glow3}"
                                 >
-                                <span class="value" id="sg-glow3-value">${settings.glow3}</span>
+                                <span class="value" id="sg-glow3-value">${panelDraftSettings.glow3}</span>
                             </div>
 
                             <div class="row">
@@ -7219,9 +7781,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.opacity3}"
+                                    value="${panelDraftSettings.opacity3}"
                                 >
-                                <span class="value" id="sg-opacity3-value">${settings.opacity3}</span>
+                                <span class="value" id="sg-opacity3-value">${panelDraftSettings.opacity3}</span>
                             </div>
 
                             <div class="row">
@@ -7232,9 +7794,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.width3}"
+                                    value="${panelDraftSettings.width3}"
                                 >
-                                <span class="value" id="sg-width3-value">${settings.width3}</span>
+                                <span class="value" id="sg-width3-value">${panelDraftSettings.width3}</span>
                             </div>
                         </div>
 
@@ -7256,18 +7818,19 @@ function createLegendaryTestWindow() {
                         <div class="control-card">
                             <span class="control-label">Styl obramowania</span>
                             <select id="sg-glow-style">
-                                <option value="1" ${Number(settings.glowStyle) === 1 ? 'selected' : ''}>Klasyczna</option>
-                                <option value="2" ${Number(settings.glowStyle) === 2 ? 'selected' : ''}>Neon 80s</option>
+                                <option value="1" ${Number(panelDraftSettings.glowStyle) === 1 ? 'selected' : ''}>Klasyczna</option>
+                                <option value="2" ${Number(panelDraftSettings.glowStyle) === 2 ? 'selected' : ''}>Neon 80s</option>
+                                <option value="3" ${Number(panelDraftSettings.glowStyle) === 3 ? 'selected' : ''}>Inner Aura</option>
                             </select>
                         </div>
 
                         <div class="control-card">
                             <span class="control-label">Efekt</span>
                             <select id="sg-effect">
-                                <option value="0" ${Number(settings.effect) === 0 ? 'selected' : ''}>Brak</option>
-                                <option value="1" ${Number(settings.effect) === 1 ? 'selected' : ''}>Pulsowanie</option>
-                                <option value="2" ${Number(settings.effect) === 2 ? 'selected' : ''}>Migotanie magii</option>
-                                <option value="3" ${Number(settings.effect) === 3 ? 'selected' : ''}>Wędrujące kolory</option>
+                                <option value="0" ${Number(panelDraftSettings.effect) === 0 ? 'selected' : ''}>Brak</option>
+                                <option value="1" ${Number(panelDraftSettings.effect) === 1 ? 'selected' : ''}>Pulsowanie</option>
+                                <option value="2" ${Number(panelDraftSettings.effect) === 2 ? 'selected' : ''}>Migotanie magii</option>
+                                <option value="3" ${Number(panelDraftSettings.effect) === 3 ? 'selected' : ''}>Wędrujące kolory</option>
                             </select>
                         </div>
 
@@ -7281,9 +7844,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.pulse}"
+                                    value="${panelDraftSettings.pulse}"
                                 >
-                                <span class="value" id="sg-pulse-value">${settings.pulse}</span>
+                                <span class="value" id="sg-pulse-value">${panelDraftSettings.pulse}</span>
                             </div>
                         </div>
                     </div>
@@ -7296,25 +7859,25 @@ function createLegendaryTestWindow() {
                         <div class="control-card">
                             <span class="control-label">Sygnał łupu</span>
                             <select id="sg-sound">
-                                <option value="0" ${Number(settings.sound) === 0 ? 'selected' : ''}>Brak</option>
-                                <option value="1" ${Number(settings.sound) === 1 ? 'selected' : ''}>1 - New Level Unlocked</option>
-                                <option value="2" ${Number(settings.sound) === 2 ? 'selected' : ''}>2 - Holy Spell Cast</option>
-                                <option value="3" ${Number(settings.sound) === 3 ? 'selected' : ''}>3 - Fantasy SFX</option>
-                                <option value="4" ${Number(settings.sound) === 4 ? 'selected' : ''}>4 - Chest + Coin</option>
-                                <option value="5" ${Number(settings.sound) === 5 ? 'selected' : ''}>5 - Magic Level Up</option>
-                                <option value="6" ${Number(settings.sound) === 6 ? 'selected' : ''}>6 - Epic Loot Drop</option>
-                                <option value="7" ${Number(settings.sound) === 7 ? 'selected' : ''}>7 - Ogoliłem jaja</option>
-                                <option value="8" ${Number(settings.sound) === 8 ? 'selected' : ''}>8 - Cześć cwelu</option>
-                                <option value="9" ${Number(settings.sound) === 9 ? 'selected' : ''}>9 - 67 i do pieca</option>
-                                <option value="10" ${Number(settings.sound) === 10 ? 'selected' : ''}>10 - Co to kurwa jest</option>
-                                <option value="11" ${Number(settings.sound) === 11 ? 'selected' : ''}>11 - UwU Hannah</option>
-                                <option value="12" ${Number(settings.sound) === 12 ? 'selected' : ''}>12 - O kurwa</option>
-                                <option value="13" ${Number(settings.sound) === 13 ? 'selected' : ''}>13 - Intro Familiada</option>
-                                <option value="14" ${Number(settings.sound) === 14 ? 'selected' : ''}>14 - Kids Saying Yay</option>
-                                <option value="15" ${Number(settings.sound) === 15 ? 'selected' : ''}>15 - Anime Girl Voice</option>
-                                <option value="16" ${Number(settings.sound) === 16 ? 'selected' : ''}>16 - SPAS-12</option>
-                                <option value="17" ${Number(settings.sound) === 17 ? 'selected' : ''}>17 - Gejowski nurek</option>
-                                <option value="18" ${Number(settings.sound) === 18 ? 'selected' : ''}>18 - Wow Anime Voice</option>
+                                <option value="0" ${Number(panelDraftSettings.sound) === 0 ? 'selected' : ''}>Brak</option>
+                                <option value="1" ${Number(panelDraftSettings.sound) === 1 ? 'selected' : ''}>1 - New Level Unlocked</option>
+                                <option value="2" ${Number(panelDraftSettings.sound) === 2 ? 'selected' : ''}>2 - Holy Spell Cast</option>
+                                <option value="3" ${Number(panelDraftSettings.sound) === 3 ? 'selected' : ''}>3 - Fantasy SFX</option>
+                                <option value="4" ${Number(panelDraftSettings.sound) === 4 ? 'selected' : ''}>4 - Chest + Coin</option>
+                                <option value="5" ${Number(panelDraftSettings.sound) === 5 ? 'selected' : ''}>5 - Magic Level Up</option>
+                                <option value="6" ${Number(panelDraftSettings.sound) === 6 ? 'selected' : ''}>6 - Epic Loot Drop</option>
+                                <option value="7" ${Number(panelDraftSettings.sound) === 7 ? 'selected' : ''}>7 - Ogoliłem jaja</option>
+                                <option value="8" ${Number(panelDraftSettings.sound) === 8 ? 'selected' : ''}>8 - Cześć cwelu</option>
+                                <option value="9" ${Number(panelDraftSettings.sound) === 9 ? 'selected' : ''}>9 - 67 i do pieca</option>
+                                <option value="10" ${Number(panelDraftSettings.sound) === 10 ? 'selected' : ''}>10 - Co to kurwa jest</option>
+                                <option value="11" ${Number(panelDraftSettings.sound) === 11 ? 'selected' : ''}>11 - UwU Hannah</option>
+                                <option value="12" ${Number(panelDraftSettings.sound) === 12 ? 'selected' : ''}>12 - O kurwa</option>
+                                <option value="13" ${Number(panelDraftSettings.sound) === 13 ? 'selected' : ''}>13 - Intro Familiada</option>
+                                <option value="14" ${Number(panelDraftSettings.sound) === 14 ? 'selected' : ''}>14 - Kids Saying Yay</option>
+                                <option value="15" ${Number(panelDraftSettings.sound) === 15 ? 'selected' : ''}>15 - Anime Girl Voice</option>
+                                <option value="16" ${Number(panelDraftSettings.sound) === 16 ? 'selected' : ''}>16 - SPAS-12</option>
+                                <option value="17" ${Number(panelDraftSettings.sound) === 17 ? 'selected' : ''}>17 - Gejowski nurek</option>
+                                <option value="18" ${Number(panelDraftSettings.sound) === 18 ? 'selected' : ''}>18 - Wow Anime Voice</option>
                             </select>
                         </div>
 
@@ -7327,9 +7890,9 @@ function createLegendaryTestWindow() {
                                     min="0"
                                     max="5"
                                     step="1"
-                                    value="${settings.volume}"
+                                    value="${panelDraftSettings.volume}"
                                 >
-                                <span class="value" id="sg-volume-value">${settings.volume}</span>
+                                <span class="value" id="sg-volume-value">${panelDraftSettings.volume}</span>
                             </div>
                         </div>
                     </div>
@@ -7358,7 +7921,7 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Własne ramki rang</span>
                             <span class="hint">Wybierz styl ramek dla rang przedmiotów</span>
                         </div>
-                        <input id="sg-item-frames-enabled" type="checkbox" ${settings.itemFramesEnabled ? 'checked' : ''}>
+                        <input id="sg-item-frames-enabled" type="checkbox" ${panelDraftSettings.itemFramesEnabled ? 'checked' : ''}>
                     </div>
                 </div>
 
@@ -7369,7 +7932,7 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Nadpisuj ramki gry</span>
                             <span class="hint">Wyłącz, aby zachować natywne ramki Margonem lub ramki z innych dodatków</span>
                         </div>
-                        <input id="sg-override-game-item-frames" type="checkbox" ${settings.overrideGameItemFrames ? 'checked' : ''}>
+                        <input id="sg-override-game-item-frames" type="checkbox" ${panelDraftSettings.overrideGameItemFrames ? 'checked' : ''}>
                     </div>
                 </div>
 
@@ -7378,29 +7941,29 @@ function createLegendaryTestWindow() {
                     <div class="control-card wide">
                         <span class="control-label">Preset</span>
                         <select id="sg-item-frame-set">
-                            <option value="1" ${Number(settings.itemFrameSet) === 1 ? 'selected' : ''}>1 - Classic Glow</option>
-                                                    <option value="2" ${Number(settings.itemFrameSet) === 2 ? 'selected' : ''}>2 - Shadowbound</option>
-                                                    <option value="3" ${Number(settings.itemFrameSet) === 3 ? 'selected' : ''}>3 - Crystal Veil</option>
-                                                    <option value="7" ${Number(settings.itemFrameSet) === 7 ? 'selected' : ''}>4 - Royal Crest</option>
-                                                    <option value="8" ${Number(settings.itemFrameSet) === 8 ? 'selected' : ''}>5 - Hexed Edge</option>
-                                                    <option value="9" ${Number(settings.itemFrameSet) === 9 ? 'selected' : ''}>6 - Clean Line</option>
-                                                    <option value="11" ${Number(settings.itemFrameSet) === 11 ? 'selected' : ''}>7 - Emberglass</option>
-                                                    <option value="12" ${Number(settings.itemFrameSet) === 12 ? 'selected' : ''}>8 - Abyssal Forge</option>
-                                                    <option value="13" ${Number(settings.itemFrameSet) === 13 ? 'selected' : ''}>9 - Prismheart</option>
-                                                    <option value="14" ${Number(settings.itemFrameSet) === 14 ? 'selected' : ''}>10 - Sovereign Core</option>
-                                                    <option value="17" ${Number(settings.itemFrameSet) === 17 ? 'selected' : ''}>11 - Nightfall</option>
-                                                    <option value="18" ${Number(settings.itemFrameSet) === 18 ? 'selected' : ''}>12 - Void Ember</option>
-                                                    <option value="19" ${Number(settings.itemFrameSet) === 19 ? 'selected' : ''}>13 - Blackthorn</option>
-                                                    <option value="20" ${Number(settings.itemFrameSet) === 20 ? 'selected' : ''}>14 - Crimson Oath</option>
-                                                    <option value="21" ${Number(settings.itemFrameSet) === 21 ? 'selected' : ''}>15 - Infernal Crown</option>
-                                                    <option value="22" ${Number(settings.itemFrameSet) === 22 ? 'selected' : ''}>16 - Molten Core</option>
-                                                    <option value="23" ${Number(settings.itemFrameSet) === 23 ? 'selected' : ''}>17 - Blood Moon</option>
-                                                    <option value="24" ${Number(settings.itemFrameSet) === 24 ? 'selected' : ''}>18 - Dragonfire</option>
-                                                    <option value="25" ${Number(settings.itemFrameSet) === 25 ? 'selected' : ''}>19 - Toxic Flame</option>
-                                                    <option value="26" ${Number(settings.itemFrameSet) === 26 ? 'selected' : ''}>20 - Royal Ember</option>
-                                                    <option value="27" ${Number(settings.itemFrameSet) === 27 ? 'selected' : ''}>21 - Blood Eclipse</option>
-                                                    <option value="28" ${Number(settings.itemFrameSet) === 28 ? 'selected' : ''}>22 - Arcane Glass</option>
-                                                    <option value="29" ${Number(settings.itemFrameSet) === 29 ? 'selected' : ''}>23 - Arcane Stone</option>
+                            <option value="1" ${Number(panelDraftSettings.itemFrameSet) === 1 ? 'selected' : ''}>1 - Classic Glow</option>
+                                                    <option value="2" ${Number(panelDraftSettings.itemFrameSet) === 2 ? 'selected' : ''}>2 - Shadowbound</option>
+                                                    <option value="3" ${Number(panelDraftSettings.itemFrameSet) === 3 ? 'selected' : ''}>3 - Crystal Veil</option>
+                                                    <option value="7" ${Number(panelDraftSettings.itemFrameSet) === 7 ? 'selected' : ''}>4 - Royal Crest</option>
+                                                    <option value="8" ${Number(panelDraftSettings.itemFrameSet) === 8 ? 'selected' : ''}>5 - Hexed Edge</option>
+                                                    <option value="9" ${Number(panelDraftSettings.itemFrameSet) === 9 ? 'selected' : ''}>6 - Clean Line</option>
+                                                    <option value="11" ${Number(panelDraftSettings.itemFrameSet) === 11 ? 'selected' : ''}>7 - Emberglass</option>
+                                                    <option value="12" ${Number(panelDraftSettings.itemFrameSet) === 12 ? 'selected' : ''}>8 - Abyssal Forge</option>
+                                                    <option value="13" ${Number(panelDraftSettings.itemFrameSet) === 13 ? 'selected' : ''}>9 - Prismheart</option>
+                                                    <option value="14" ${Number(panelDraftSettings.itemFrameSet) === 14 ? 'selected' : ''}>10 - Sovereign Core</option>
+                                                    <option value="17" ${Number(panelDraftSettings.itemFrameSet) === 17 ? 'selected' : ''}>11 - Nightfall</option>
+                                                    <option value="18" ${Number(panelDraftSettings.itemFrameSet) === 18 ? 'selected' : ''}>12 - Void Ember</option>
+                                                    <option value="19" ${Number(panelDraftSettings.itemFrameSet) === 19 ? 'selected' : ''}>13 - Blackthorn</option>
+                                                    <option value="20" ${Number(panelDraftSettings.itemFrameSet) === 20 ? 'selected' : ''}>14 - Crimson Oath</option>
+                                                    <option value="21" ${Number(panelDraftSettings.itemFrameSet) === 21 ? 'selected' : ''}>15 - Infernal Crown</option>
+                                                    <option value="22" ${Number(panelDraftSettings.itemFrameSet) === 22 ? 'selected' : ''}>16 - Molten Core</option>
+                                                    <option value="23" ${Number(panelDraftSettings.itemFrameSet) === 23 ? 'selected' : ''}>17 - Blood Moon</option>
+                                                    <option value="24" ${Number(panelDraftSettings.itemFrameSet) === 24 ? 'selected' : ''}>18 - Dragonfire</option>
+                                                    <option value="25" ${Number(panelDraftSettings.itemFrameSet) === 25 ? 'selected' : ''}>19 - Toxic Flame</option>
+                                                    <option value="26" ${Number(panelDraftSettings.itemFrameSet) === 26 ? 'selected' : ''}>20 - Royal Ember</option>
+                                                    <option value="27" ${Number(panelDraftSettings.itemFrameSet) === 27 ? 'selected' : ''}>21 - Blood Eclipse</option>
+                                                    <option value="28" ${Number(panelDraftSettings.itemFrameSet) === 28 ? 'selected' : ''}>22 - Arcane Glass</option>
+                                                    <option value="29" ${Number(panelDraftSettings.itemFrameSet) === 29 ? 'selected' : ''}>23 - Arcane Stone</option>
                         </select>
                     </div>
                 </div>
@@ -7413,28 +7976,28 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Oznaczenie na przedmiocie</span>
                             <span class="hint">Pokazuje poziom ulepszenia w rogu slotu</span>
                         </div>
-                        <input id="sg-upgrade-badge-enabled" type="checkbox" ${settings.upgradeBadgeEnabled ? 'checked' : ''}>
+                        <input id="sg-upgrade-badge-enabled" type="checkbox" ${panelDraftSettings.upgradeBadgeEnabled ? 'checked' : ''}>
                     </div>
 
                     <div class="control-card wide" style="margin-top:10px;">
                         <span class="control-label">Wygląd</span>
                         <select id="sg-upgrade-badge-style">
-                            <option value="1" ${Number(settings.upgradeBadgeStyle) === 1 ? 'selected' : ''}>1 - Neon</option>
-                            <option value="2" ${Number(settings.upgradeBadgeStyle) === 2 ? 'selected' : ''}>2 - Runiczny</option>
-                            <option value="3" ${Number(settings.upgradeBadgeStyle) === 3 ? 'selected' : ''}>3 - Minimalny</option>
-                            <option value="4" ${Number(settings.upgradeBadgeStyle) === 4 ? 'selected' : ''}>4 - Narożny</option>
-                            <option value="5" ${Number(settings.upgradeBadgeStyle) === 5 ? 'selected' : ''}>5 - Ember</option>
-                            <option value="6" ${Number(settings.upgradeBadgeStyle) === 6 ? 'selected' : ''}>6 - Toxic</option>
-                            <option value="7" ${Number(settings.upgradeBadgeStyle) === 7 ? 'selected' : ''}>7 - Royal Gold</option>
-                            <option value="8" ${Number(settings.upgradeBadgeStyle) === 8 ? 'selected' : ''}>8 - Crimson</option>
-                            <option value="9" ${Number(settings.upgradeBadgeStyle) === 9 ? 'selected' : ''}>9 - Blood Moon</option>
-                            <option value="10" ${Number(settings.upgradeBadgeStyle) === 10 ? 'selected' : ''}>10 - Frost</option>
-                            <option value="11" ${Number(settings.upgradeBadgeStyle) === 11 ? 'selected' : ''}>11 - Void</option>
-                            <option value="12" ${Number(settings.upgradeBadgeStyle) === 12 ? 'selected' : ''}>12 - Surowy</option>
-                            <option value="13" ${Number(settings.upgradeBadgeStyle) === 13 ? 'selected' : ''}>13 - Cyber</option>
-                            <option value="14" ${Number(settings.upgradeBadgeStyle) === 14 ? 'selected' : ''}>14 - Stalowy</option>
-                            <option value="15" ${Number(settings.upgradeBadgeStyle) === 15 ? 'selected' : ''}>15 - Relikt</option>
-                            <option value="16" ${Number(settings.upgradeBadgeStyle) === 16 ? 'selected' : ''}>16 - Czysty numer</option>
+                            <option value="1" ${Number(panelDraftSettings.upgradeBadgeStyle) === 1 ? 'selected' : ''}>1 - Neon</option>
+                            <option value="2" ${Number(panelDraftSettings.upgradeBadgeStyle) === 2 ? 'selected' : ''}>2 - Runiczny</option>
+                            <option value="3" ${Number(panelDraftSettings.upgradeBadgeStyle) === 3 ? 'selected' : ''}>3 - Minimalny</option>
+                            <option value="4" ${Number(panelDraftSettings.upgradeBadgeStyle) === 4 ? 'selected' : ''}>4 - Narożny</option>
+                            <option value="5" ${Number(panelDraftSettings.upgradeBadgeStyle) === 5 ? 'selected' : ''}>5 - Ember</option>
+                            <option value="6" ${Number(panelDraftSettings.upgradeBadgeStyle) === 6 ? 'selected' : ''}>6 - Toxic</option>
+                            <option value="7" ${Number(panelDraftSettings.upgradeBadgeStyle) === 7 ? 'selected' : ''}>7 - Royal Gold</option>
+                            <option value="8" ${Number(panelDraftSettings.upgradeBadgeStyle) === 8 ? 'selected' : ''}>8 - Crimson</option>
+                            <option value="9" ${Number(panelDraftSettings.upgradeBadgeStyle) === 9 ? 'selected' : ''}>9 - Blood Moon</option>
+                            <option value="10" ${Number(panelDraftSettings.upgradeBadgeStyle) === 10 ? 'selected' : ''}>10 - Frost</option>
+                            <option value="11" ${Number(panelDraftSettings.upgradeBadgeStyle) === 11 ? 'selected' : ''}>11 - Void</option>
+                            <option value="12" ${Number(panelDraftSettings.upgradeBadgeStyle) === 12 ? 'selected' : ''}>12 - Surowy</option>
+                            <option value="13" ${Number(panelDraftSettings.upgradeBadgeStyle) === 13 ? 'selected' : ''}>13 - Cyber</option>
+                            <option value="14" ${Number(panelDraftSettings.upgradeBadgeStyle) === 14 ? 'selected' : ''}>14 - Stalowy</option>
+                            <option value="15" ${Number(panelDraftSettings.upgradeBadgeStyle) === 15 ? 'selected' : ''}>15 - Relikt</option>
+                            <option value="16" ${Number(panelDraftSettings.upgradeBadgeStyle) === 16 ? 'selected' : ''}>16 - Czysty numer</option>
                         </select>
                     </div>
 
@@ -7443,7 +8006,7 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Kolor zgodny z rangą</span>
                             <span class="hint">Synchronizuje oznaczenie z kolorem wybranej ramki i rangi przedmiotu</span>
                         </div>
-                        <input id="sg-upgrade-badge-sync-rarity" type="checkbox" ${settings.upgradeBadgeSyncRarityColor ? 'checked' : ''}>
+                        <input id="sg-upgrade-badge-sync-rarity" type="checkbox" ${panelDraftSettings.upgradeBadgeSyncRarityColor ? 'checked' : ''}>
                     </div>
 
                     <div class="frames-note">
@@ -7457,27 +8020,27 @@ function createLegendaryTestWindow() {
                         <label class="rarity-row common">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Zwykły - bez ramki</span><span class="rarity-code">common / t-norm</span></span>
-                            <input id="sg-frame-common" type="checkbox" ${settings.frameCommon ? 'checked' : ''} disabled>
+                            <input id="sg-frame-common" type="checkbox" ${panelDraftSettings.frameCommon ? 'checked' : ''} disabled>
                         </label>
                         <label class="rarity-row unique">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Unikatowy</span><span class="rarity-code">unique / t-uniupg</span></span>
-                            <input id="sg-frame-unique" type="checkbox" ${settings.frameUnique ? 'checked' : ''}>
+                            <input id="sg-frame-unique" type="checkbox" ${panelDraftSettings.frameUnique ? 'checked' : ''}>
                         </label>
                         <label class="rarity-row heroic">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Heroiczny</span><span class="rarity-code">heroic / t-her</span></span>
-                            <input id="sg-frame-heroic" type="checkbox" ${settings.frameHeroic ? 'checked' : ''}>
+                            <input id="sg-frame-heroic" type="checkbox" ${panelDraftSettings.frameHeroic ? 'checked' : ''}>
                         </label>
                         <label class="rarity-row upgraded">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Ulepszony</span><span class="rarity-code">upgraded / t-upgraded</span></span>
-                            <input id="sg-frame-upgraded" type="checkbox" ${settings.frameUpgraded ? 'checked' : ''}>
+                            <input id="sg-frame-upgraded" type="checkbox" ${panelDraftSettings.frameUpgraded ? 'checked' : ''}>
                         </label>
                         <label class="rarity-row legendary">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Legendarny</span><span class="rarity-code">legendary / t-leg</span></span>
-                            <input id="sg-frame-legendary" type="checkbox" ${settings.frameLegendary ? 'checked' : ''}>
+                            <input id="sg-frame-legendary" type="checkbox" ${panelDraftSettings.frameLegendary ? 'checked' : ''}>
                         </label>
                         <div class="rarity-row artifact">
                             <span class="rarity-swatch"></span>
@@ -7497,7 +8060,7 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Kolorystyczne obwódki dymków</span>
                             <span class="hint">Może działać razem z ramkami przedmiotów</span>
                         </div>
-                        <input id="sg-item-tips-enabled" type="checkbox" ${settings.itemTipsEnabled ? 'checked' : ''}>
+                        <input id="sg-item-tips-enabled" type="checkbox" ${panelDraftSettings.itemTipsEnabled ? 'checked' : ''}>
                     </div>
                 </div>
 
@@ -7507,7 +8070,7 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Kolor nazwy i rangi</span>
                             <span class="hint">Podmienia domyślne kolory gry na paletę wybranego dymku</span>
                         </div>
-                        <input id="sg-item-tip-text-colors" type="checkbox" ${settings.itemTipTextColors ? 'checked' : ''}>
+                        <input id="sg-item-tip-text-colors" type="checkbox" ${panelDraftSettings.itemTipTextColors ? 'checked' : ''}>
                     </div>
                 </div>
 
@@ -7517,7 +8080,7 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Poświata wokół dymku</span>
                             <span class="hint">Delikatna poświata w kolorze aktualnej ramki dymku</span>
                         </div>
-                        <input id="sg-item-tip-outer-glow" type="checkbox" ${settings.itemTipOuterGlow ? 'checked' : ''}>
+                        <input id="sg-item-tip-outer-glow" type="checkbox" ${panelDraftSettings.itemTipOuterGlow ? 'checked' : ''}>
                     </div>
                 </div>
 
@@ -7526,17 +8089,17 @@ function createLegendaryTestWindow() {
                     <div class="control-card wide">
                         <span class="control-label">Font</span>
                         <select id="sg-item-tip-font">
-                            <option value="default" ${settings.itemTipFont === 'default' ? 'selected' : ''}>Domyślna gry</option>
-                            <option value="cinzel" ${settings.itemTipFont === 'cinzel' ? 'selected' : ''}>Cinzel (fantasy / monumentalna)</option>
-                            <option value="cormorant" ${settings.itemTipFont === 'cormorant' ? 'selected' : ''}>Cormorant Garamond (dark fantasy)</option>
-                            <option value="vollkorn" ${settings.itemTipFont === 'vollkorn' ? 'selected' : ''}>Vollkorn (stara księga RPG)</option>
-                            <option value="spectral" ${settings.itemTipFont === 'spectral' ? 'selected' : ''}>Spectral (elegancka / czytelna)</option>
-                            <option value="bree" ${settings.itemTipFont === 'bree' ? 'selected' : ''}>Bree Serif (komiksowa / przygodowa)</option>
-                            <option value="alegreya" ${settings.itemTipFont === 'alegreya' ? 'selected' : ''}>Alegreya (fantasy / opowieść)</option>
-                            <option value="playfair" ${settings.itemTipFont === 'playfair' ? 'selected' : ''}>Playfair Display (królewska / arystokratyczna)</option>
-                            <option value="grenze" ${settings.itemTipFont === 'grenze' ? 'selected' : ''}>Grenze Gotisch (gotycka / mroczna)</option>
-                            <option value="lora" ${settings.itemTipFont === 'lora' ? 'selected' : ''}>Lora (kronika / klasyczne fantasy)</option>
-                            <option value="merriweather" ${settings.itemTipFont === 'merriweather' ? 'selected' : ''}>Merriweather (ciężka / czytelna)</option>
+                            <option value="default" ${panelDraftSettings.itemTipFont === 'default' ? 'selected' : ''}>Domyślna gry</option>
+                            <option value="cinzel" ${panelDraftSettings.itemTipFont === 'cinzel' ? 'selected' : ''}>Cinzel (fantasy / monumentalna)</option>
+                            <option value="cormorant" ${panelDraftSettings.itemTipFont === 'cormorant' ? 'selected' : ''}>Cormorant Garamond (dark fantasy)</option>
+                            <option value="vollkorn" ${panelDraftSettings.itemTipFont === 'vollkorn' ? 'selected' : ''}>Vollkorn (stara księga RPG)</option>
+                            <option value="spectral" ${panelDraftSettings.itemTipFont === 'spectral' ? 'selected' : ''}>Spectral (elegancka / czytelna)</option>
+                            <option value="bree" ${panelDraftSettings.itemTipFont === 'bree' ? 'selected' : ''}>Bree Serif (komiksowa / przygodowa)</option>
+                            <option value="alegreya" ${panelDraftSettings.itemTipFont === 'alegreya' ? 'selected' : ''}>Alegreya (fantasy / opowieść)</option>
+                            <option value="playfair" ${panelDraftSettings.itemTipFont === 'playfair' ? 'selected' : ''}>Playfair Display (królewska / arystokratyczna)</option>
+                            <option value="grenze" ${panelDraftSettings.itemTipFont === 'grenze' ? 'selected' : ''}>Grenze Gotisch (gotycka / mroczna)</option>
+                            <option value="lora" ${panelDraftSettings.itemTipFont === 'lora' ? 'selected' : ''}>Lora (kronika / klasyczne fantasy)</option>
+                            <option value="merriweather" ${panelDraftSettings.itemTipFont === 'merriweather' ? 'selected' : ''}>Merriweather (ciężka / czytelna)</option>
                         </select>
                     </div>
                     <div class="frames-note">
@@ -7549,30 +8112,30 @@ function createLegendaryTestWindow() {
                     <div class="control-card wide">
                         <span class="control-label">Preset</span>
                         <select id="sg-item-tip-set">
-                            <option value="0" ${Number(settings.itemTipSet) === 0 ? 'selected' : ''}>0 - Synchronizuj z ramkami</option>
-                            <option value="1" ${Number(settings.itemTipSet) === 1 ? 'selected' : ''}>1 - Classic Glow</option>
-                            <option value="2" ${Number(settings.itemTipSet) === 2 ? 'selected' : ''}>2 - Shadowbound</option>
-                            <option value="3" ${Number(settings.itemTipSet) === 3 ? 'selected' : ''}>3 - Crystal Veil</option>
-                            <option value="7" ${Number(settings.itemTipSet) === 7 ? 'selected' : ''}>4 - Royal Crest</option>
-                            <option value="8" ${Number(settings.itemTipSet) === 8 ? 'selected' : ''}>5 - Hexed Edge</option>
-                            <option value="9" ${Number(settings.itemTipSet) === 9 ? 'selected' : ''}>6 - Clean Line</option>
-                            <option value="11" ${Number(settings.itemTipSet) === 11 ? 'selected' : ''}>7 - Emberglass</option>
-                            <option value="12" ${Number(settings.itemTipSet) === 12 ? 'selected' : ''}>8 - Abyssal Forge</option>
-                            <option value="13" ${Number(settings.itemTipSet) === 13 ? 'selected' : ''}>9 - Prismheart</option>
-                            <option value="14" ${Number(settings.itemTipSet) === 14 ? 'selected' : ''}>10 - Sovereign Core</option>
-                            <option value="17" ${Number(settings.itemTipSet) === 17 ? 'selected' : ''}>11 - Nightfall</option>
-                            <option value="18" ${Number(settings.itemTipSet) === 18 ? 'selected' : ''}>12 - Void Ember</option>
-                            <option value="19" ${Number(settings.itemTipSet) === 19 ? 'selected' : ''}>13 - Blackthorn</option>
-                            <option value="20" ${Number(settings.itemTipSet) === 20 ? 'selected' : ''}>14 - Crimson Oath</option>
-                            <option value="21" ${Number(settings.itemTipSet) === 21 ? 'selected' : ''}>15 - Infernal Crown</option>
-                            <option value="22" ${Number(settings.itemTipSet) === 22 ? 'selected' : ''}>16 - Molten Core</option>
-                            <option value="23" ${Number(settings.itemTipSet) === 23 ? 'selected' : ''}>17 - Blood Moon</option>
-                            <option value="24" ${Number(settings.itemTipSet) === 24 ? 'selected' : ''}>18 - Dragonfire</option>
-                            <option value="25" ${Number(settings.itemTipSet) === 25 ? 'selected' : ''}>19 - Toxic Flame</option>
-                            <option value="26" ${Number(settings.itemTipSet) === 26 ? 'selected' : ''}>20 - Royal Ember</option>
-                            <option value="27" ${Number(settings.itemTipSet) === 27 ? 'selected' : ''}>21 - Blood Eclipse</option>
-                            <option value="28" ${Number(settings.itemTipSet) === 28 ? 'selected' : ''}>22 - Arcane Glass</option>
-                            <option value="29" ${Number(settings.itemTipSet) === 29 ? 'selected' : ''}>23 - Arcane Stone</option>
+                            <option value="0" ${Number(panelDraftSettings.itemTipSet) === 0 ? 'selected' : ''}>0 - Synchronizuj z ramkami</option>
+                            <option value="1" ${Number(panelDraftSettings.itemTipSet) === 1 ? 'selected' : ''}>1 - Classic Glow</option>
+                            <option value="2" ${Number(panelDraftSettings.itemTipSet) === 2 ? 'selected' : ''}>2 - Shadowbound</option>
+                            <option value="3" ${Number(panelDraftSettings.itemTipSet) === 3 ? 'selected' : ''}>3 - Crystal Veil</option>
+                            <option value="7" ${Number(panelDraftSettings.itemTipSet) === 7 ? 'selected' : ''}>4 - Royal Crest</option>
+                            <option value="8" ${Number(panelDraftSettings.itemTipSet) === 8 ? 'selected' : ''}>5 - Hexed Edge</option>
+                            <option value="9" ${Number(panelDraftSettings.itemTipSet) === 9 ? 'selected' : ''}>6 - Clean Line</option>
+                            <option value="11" ${Number(panelDraftSettings.itemTipSet) === 11 ? 'selected' : ''}>7 - Emberglass</option>
+                            <option value="12" ${Number(panelDraftSettings.itemTipSet) === 12 ? 'selected' : ''}>8 - Abyssal Forge</option>
+                            <option value="13" ${Number(panelDraftSettings.itemTipSet) === 13 ? 'selected' : ''}>9 - Prismheart</option>
+                            <option value="14" ${Number(panelDraftSettings.itemTipSet) === 14 ? 'selected' : ''}>10 - Sovereign Core</option>
+                            <option value="17" ${Number(panelDraftSettings.itemTipSet) === 17 ? 'selected' : ''}>11 - Nightfall</option>
+                            <option value="18" ${Number(panelDraftSettings.itemTipSet) === 18 ? 'selected' : ''}>12 - Void Ember</option>
+                            <option value="19" ${Number(panelDraftSettings.itemTipSet) === 19 ? 'selected' : ''}>13 - Blackthorn</option>
+                            <option value="20" ${Number(panelDraftSettings.itemTipSet) === 20 ? 'selected' : ''}>14 - Crimson Oath</option>
+                            <option value="21" ${Number(panelDraftSettings.itemTipSet) === 21 ? 'selected' : ''}>15 - Infernal Crown</option>
+                            <option value="22" ${Number(panelDraftSettings.itemTipSet) === 22 ? 'selected' : ''}>16 - Molten Core</option>
+                            <option value="23" ${Number(panelDraftSettings.itemTipSet) === 23 ? 'selected' : ''}>17 - Blood Moon</option>
+                            <option value="24" ${Number(panelDraftSettings.itemTipSet) === 24 ? 'selected' : ''}>18 - Dragonfire</option>
+                            <option value="25" ${Number(panelDraftSettings.itemTipSet) === 25 ? 'selected' : ''}>19 - Toxic Flame</option>
+                            <option value="26" ${Number(panelDraftSettings.itemTipSet) === 26 ? 'selected' : ''}>20 - Royal Ember</option>
+                            <option value="27" ${Number(panelDraftSettings.itemTipSet) === 27 ? 'selected' : ''}>21 - Blood Eclipse</option>
+                            <option value="28" ${Number(panelDraftSettings.itemTipSet) === 28 ? 'selected' : ''}>22 - Arcane Glass</option>
+                            <option value="29" ${Number(panelDraftSettings.itemTipSet) === 29 ? 'selected' : ''}>23 - Arcane Stone</option>
                         </select>
                     </div>
                     <div class="frames-note">
@@ -7592,22 +8155,22 @@ function createLegendaryTestWindow() {
                         <label class="rarity-row unique">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Unikatowy</span><span class="rarity-code">t-uniupg</span></span>
-                            <input id="sg-tip-unique" type="checkbox" ${settings.tipUnique ? 'checked' : ''}>
+                            <input id="sg-tip-unique" type="checkbox" ${panelDraftSettings.tipUnique ? 'checked' : ''}>
                         </label>
                         <label class="rarity-row heroic">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Heroiczny</span><span class="rarity-code">t-her</span></span>
-                            <input id="sg-tip-heroic" type="checkbox" ${settings.tipHeroic ? 'checked' : ''}>
+                            <input id="sg-tip-heroic" type="checkbox" ${panelDraftSettings.tipHeroic ? 'checked' : ''}>
                         </label>
                         <label class="rarity-row upgraded">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Ulepszony</span><span class="rarity-code">t-upgraded</span></span>
-                            <input id="sg-tip-upgraded" type="checkbox" ${settings.tipUpgraded ? 'checked' : ''}>
+                            <input id="sg-tip-upgraded" type="checkbox" ${panelDraftSettings.tipUpgraded ? 'checked' : ''}>
                         </label>
                         <label class="rarity-row legendary">
                             <span class="rarity-swatch"></span>
                             <span class="rarity-copy"><span class="rarity-name">Legendarny</span><span class="rarity-code">t-leg</span></span>
-                            <input id="sg-tip-legendary" type="checkbox" ${settings.tipLegendary ? 'checked' : ''}>
+                            <input id="sg-tip-legendary" type="checkbox" ${panelDraftSettings.tipLegendary ? 'checked' : ''}>
                         </label>
                         <div class="rarity-row artifact">
                             <span class="rarity-swatch"></span>
@@ -7626,7 +8189,7 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Własne emotikony</span>
                             <span class="hint">Zamienia obsługiwane kody :nazwa: na małe emotikony tylko u osób z dodatkiem</span>
                         </div>
-                        <input id="sg-chat-emoticons-enabled" type="checkbox" ${settings.chatEmoticonsEnabled ? 'checked' : ''}>
+                        <input id="sg-chat-emoticons-enabled" type="checkbox" ${panelDraftSettings.chatEmoticonsEnabled ? 'checked' : ''}>
                     </div>
                     <div class="frames-note">
                         Dostępne emotki. Przewijaj listę kółkiem myszy lub paskiem po prawej stronie. Kliknięcie kafelka kopiuje kod do schowka. Osoba bez Shacal Customizera zobaczy kod tekstowy.
@@ -7646,13 +8209,13 @@ function createLegendaryTestWindow() {
                             <span class="master-label">Automatycznie ogłaszaj zdobyte legendy</span>
                             <span class="hint">Ogłasza legendę, gdy trafi z okna łupu do Twojego ekwipunku</span>
                         </div>
-                        <input id="sg-chat-announcements-enabled" type="checkbox" ${settings.chatAnnouncementsEnabled ? 'checked' : ''}>
+                        <input id="sg-chat-announcements-enabled" type="checkbox" ${panelDraftSettings.chatAnnouncementsEnabled ? 'checked' : ''}>
                     </div>
                 </div>
 
                 <div class="panel-section">
                     <div class="section-title">Treść wiadomości</div>
-                    <textarea id="sg-chat-message-template" class="chat-template" maxlength="240" spellcheck="false">${escapeHtml(settings.chatMessageTemplate)}</textarea>
+                    <textarea id="sg-chat-message-template" class="chat-template" maxlength="240" spellcheck="false">${escapeHtml(panelDraftSettings.chatMessageTemplate)}</textarea>
                     <div class="frames-note">
                         Wstaw <b>{ITEM}</b> tam, gdzie ma pojawić się link do legendy. Nie musisz wpisywać <b>/oo</b>; wiadomość trafi na kanał globalny. Jeśli usuniesz {ITEM}, link zostanie dodany na końcu.
                     </div>
@@ -7672,9 +8235,35 @@ function createLegendaryTestWindow() {
                 </div>
 
             </div>
+            <div class="sg-save-footer">
+                <button
+                    id="sg-save-settings"
+                    class="sg-save-settings"
+                    type="button"
+                >ZAPISZ</button>
+
+                <div class="sg-save-hint">
+                    Zmiany obowiązują dopiero po zapisaniu.
+                </div>
+            </div>
         `;
 
         document.body.appendChild(panel);
+        panel
+            .querySelector(
+                '#sg-save-settings'
+            )
+            .addEventListener(
+                'click',
+                () => {
+                    commitPanelDraftSettings(
+                        panel
+                    );
+                }
+            );
+
+        updateSaveButtonState(panel);
+
         enablePanelWheelScrolling(panel);
 
         panel
@@ -7705,55 +8294,6 @@ function createLegendaryTestWindow() {
 
         bindPanel(panel);
         makeDraggable(panel);
-    }
-
-    function randomVividHexColor() {
-        /*
-         * HSL daje dużo ładniejsze i bardziej nasycone zestawy
-         * niż całkowicie losowe RGB (które często trafia w szarości).
-         */
-        const hue = Math.floor(Math.random() * 360);
-        const saturation = 82 + Math.floor(Math.random() * 15);
-        const lightness = 48 + Math.floor(Math.random() * 14);
-
-        const h = hue / 360;
-        const s = saturation / 100;
-        const l = lightness / 100;
-
-        const hueToRgb = (p, q, t) => {
-            if (t < 0) t += 1;
-            if (t > 1) t -= 1;
-            if (t < 1 / 6) return p + (q - p) * 6 * t;
-            if (t < 1 / 2) return q;
-            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-            return p;
-        };
-
-        let r;
-        let g;
-        let b;
-
-        if (s === 0) {
-            r = g = b = l;
-        } else {
-            const q =
-                l < 0.5
-                    ? l * (1 + s)
-                    : l + s - l * s;
-
-            const p = 2 * l - q;
-
-            r = hueToRgb(p, q, h + 1 / 3);
-            g = hueToRgb(p, q, h);
-            b = hueToRgb(p, q, h - 1 / 3);
-        }
-
-        const toHex = value =>
-            Math.round(value * 255)
-                .toString(16)
-                .padStart(2, '0');
-
-        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     }
 
     function generateRandomGlowColors() {
@@ -7841,7 +8381,7 @@ function createLegendaryTestWindow() {
         const bindFrameToggle = (selector, property) => {
             panel.querySelector(selector).addEventListener('change', event => {
                 settings[property] = event.target.checked;
-                saveSettings();
+                markPanelDraftDirty(panel);
             });
         };
 
@@ -7860,12 +8400,12 @@ function createLegendaryTestWindow() {
             .addEventListener('change', event => {
                 const requestedStyle = Number(event.target.value);
 
-                settings.upgradeBadgeStyle =
+                panelDraftSettings.upgradeBadgeStyle =
                     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].includes(requestedStyle)
                         ? requestedStyle
                         : 1;
 
-                saveSettings();
+                markPanelDraftDirty(panel);
             });
 
         bindFrameToggle('#sg-item-tips-enabled', 'itemTipsEnabled');
@@ -7876,12 +8416,12 @@ function createLegendaryTestWindow() {
             .querySelector('#sg-item-tip-font')
             .addEventListener('change', event => {
                 const requestedFont = event.target.value;
-                settings.itemTipFont =
+                panelDraftSettings.itemTipFont =
                     ['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']
                         .includes(requestedFont)
                         ? requestedFont
                         : 'default';
-                saveSettings();
+                markPanelDraftDirty(panel);
             });
 
         bindFrameToggle('#sg-tip-unique', 'tipUnique');
@@ -7918,10 +8458,10 @@ function createLegendaryTestWindow() {
         };
 
         chatEmoticonsInput?.addEventListener('change', event => {
-            settings.chatEmoticonsEnabled =
+            panelDraftSettings.chatEmoticonsEnabled =
                 event.target.checked;
 
-            saveSettings();
+            markPanelDraftDirty(panel);
         });
 
         chatEmoteCatalog?.addEventListener('click', async event => {
@@ -7987,10 +8527,10 @@ function createLegendaryTestWindow() {
         });
 
         chatEnabledInput.addEventListener('change', event => {
-            settings.chatAnnouncementsEnabled = event.target.checked;
-            saveSettings();
+            panelDraftSettings.chatAnnouncementsEnabled = event.target.checked;
+            markPanelDraftDirty(panel);
 
-            if (settings.chatAnnouncementsEnabled) {
+            if (panelDraftSettings.chatAnnouncementsEnabled) {
                 primeLegendaryChatTracker();
             } else {
                 resetLegendaryChatTracker();
@@ -7998,7 +8538,7 @@ function createLegendaryTestWindow() {
         });
 
         chatTemplateInput.addEventListener('input', event => {
-            settings.chatMessageTemplate = String(event.target.value || '')
+            panelDraftSettings.chatMessageTemplate = String(event.target.value || '')
                 .replace(/\u00a0/g, ' ')
                 .slice(0, 240);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
@@ -8006,10 +8546,10 @@ function createLegendaryTestWindow() {
         });
 
         chatTestButton?.addEventListener('click', () => {
-            settings.chatMessageTemplate = String(chatTemplateInput.value || '')
+            panelDraftSettings.chatMessageTemplate = String(chatTemplateInput.value || '')
                 .replace(/\u00a0/g, ' ')
                 .slice(0, 240);
-            saveSettings();
+            markPanelDraftDirty(panel);
 
             if (chatTestStatus) {
                 chatTestStatus.textContent = 'Wysyłanie testu...';
@@ -8030,13 +8570,13 @@ function createLegendaryTestWindow() {
                 const requestedTipSet =
                     Number(event.target.value);
 
-                settings.itemTipSet =
+                panelDraftSettings.itemTipSet =
                     requestedTipSet === 0 ||
                     [1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
                         .includes(requestedTipSet)
                         ? requestedTipSet
                         : 0;
-                saveSettings();
+                markPanelDraftDirty(panel);
             });
 
         panel
@@ -8045,12 +8585,12 @@ function createLegendaryTestWindow() {
                 const requestedFrameSet =
                     Number(event.target.value) || 1;
 
-                settings.itemFrameSet =
+                panelDraftSettings.itemFrameSet =
                     [1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
                         .includes(requestedFrameSet)
                         ? requestedFrameSet
                         : 1;
-                saveSettings();
+                markPanelDraftDirty(panel);
             });
 
         const bind = (
@@ -8062,15 +8602,15 @@ function createLegendaryTestWindow() {
                 .querySelector(selector)
                 .addEventListener('input', event => {
                     settings[property] = parser(event.target.value);
-                    saveSettings();
+                    markPanelDraftDirty(panel);
                 });
         };
 
         panel
             .querySelector('#sg-enabled')
             .addEventListener('change', event => {
-                settings.enabled = event.target.checked;
-                saveSettings();
+                panelDraftSettings.enabled = event.target.checked;
+                markPanelDraftDirty(panel);
             });
 
         const normalMode =
@@ -8080,7 +8620,7 @@ function createLegendaryTestWindow() {
             panel.querySelector('#sg-mode-legendary');
 
         const setDropMode = mode => {
-            settings.dropMode = mode;
+            panelDraftSettings.dropMode = mode;
 
             normalMode.checked =
                 mode === DROP_MODE_NORMAL;
@@ -8088,13 +8628,13 @@ function createLegendaryTestWindow() {
             legendaryMode.checked =
                 mode === DROP_MODE_LEGENDARY;
 
-            saveSettings();
+            markPanelDraftDirty(panel);
         };
 
         normalMode.addEventListener('change', () => {
             if (!normalMode.checked) {
                 normalMode.checked =
-                    settings.dropMode === DROP_MODE_NORMAL;
+                    panelDraftSettings.dropMode === DROP_MODE_NORMAL;
                 return;
             }
 
@@ -8104,7 +8644,7 @@ function createLegendaryTestWindow() {
         legendaryMode.addEventListener('change', () => {
             if (!legendaryMode.checked) {
                 legendaryMode.checked =
-                    settings.dropMode === DROP_MODE_LEGENDARY;
+                    panelDraftSettings.dropMode === DROP_MODE_LEGENDARY;
                 return;
             }
 
@@ -8124,15 +8664,15 @@ function createLegendaryTestWindow() {
                     color3
                 ] = generateRandomGlowColors();
 
-                settings.color1 = color1;
-                settings.color2 = color2;
-                settings.color3 = color3;
+                panelDraftSettings.color1 = color1;
+                panelDraftSettings.color2 = color2;
+                panelDraftSettings.color3 = color3;
 
                 panel.querySelector('#sg-color1').value = color1;
                 panel.querySelector('#sg-color2').value = color2;
                 panel.querySelector('#sg-color3').value = color3;
 
-                saveSettings();
+                markPanelDraftDirty(panel);
             });
 
         const bindLevel = (selector, property, valueSelector) => {
@@ -8146,7 +8686,7 @@ function createLegendaryTestWindow() {
                     value.textContent = settings[property];
                 }
 
-                saveSettings();
+                markPanelDraftDirty(panel);
             });
         };
 
@@ -8165,49 +8705,153 @@ function createLegendaryTestWindow() {
         const glowStyleSelect =
             panel.querySelector('#sg-glow-style');
 
-        glowStyleSelect.addEventListener('change', event => {
-            settings.glowStyle =
-                Number(event.target.value) === 2 ? 2 : 1;
+        function updateGlowStyleUiState() {
+            const style =
+                Number(
+                    panelDraftSettings.glowStyle
+                ) || STYLE_CLASSIC;
 
-            saveSettings();
+            const innerAura =
+                style === STYLE_INNER_AURA;
+
+            const channel2 =
+                panel
+                    .querySelector('#sg-color2')
+                    ?.closest('.channel-card');
+
+            const channel3 =
+                panel
+                    .querySelector('#sg-color3')
+                    ?.closest('.channel-card');
+
+            if (channel2) {
+                channel2.style.display =
+                    innerAura ? 'none' : '';
+            }
+
+            if (channel3) {
+                channel3.style.display =
+                    innerAura ? 'none' : '';
+            }
+
+            const randomColors =
+                panel.querySelector(
+                    '#sg-random-colors'
+                );
+
+            if (randomColors) {
+                randomColors.style.display =
+                    innerAura ? 'none' : '';
+            }
+
+            const movingColorsOption =
+                panel
+                    .querySelector('#sg-effect')
+                    ?.querySelector(
+                        'option[value="3"]'
+                    );
+
+            if (movingColorsOption) {
+                movingColorsOption.disabled =
+                    innerAura;
+            }
+
+            if (
+                innerAura &&
+                Number(
+                    panelDraftSettings.effect
+                ) === EFFECT_MOVING_COLORS
+            ) {
+                panelDraftSettings.effect =
+                    EFFECT_NONE;
+
+                const effectSelect =
+                    panel.querySelector(
+                        '#sg-effect'
+                    );
+
+                if (effectSelect) {
+                    effectSelect.value =
+                        String(EFFECT_NONE);
+                }
+            }
+        }
+
+        glowStyleSelect.addEventListener('change', event => {
+            const requestedStyle =
+                Number(event.target.value);
+
+            panelDraftSettings.glowStyle =
+                [
+                    STYLE_CLASSIC,
+                    STYLE_NEON_80S,
+                    STYLE_INNER_AURA
+                ].includes(requestedStyle)
+                    ? requestedStyle
+                    : STYLE_CLASSIC;
+
+            updateGlowStyleUiState();
+            markPanelDraftDirty(panel);
         });
 
         const effectSelect =
             panel.querySelector('#sg-effect');
 
         effectSelect.addEventListener('change', event => {
-            settings.effect = Math.max(
-                0,
-                Math.min(
-                    3,
-                    Number(event.target.value) || 0
-                )
-            );
+            let nextEffect =
+                Math.max(
+                    0,
+                    Math.min(
+                        EFFECT_MOVING_COLORS,
+                        Number(
+                            event.target.value
+                        ) || 0
+                    )
+                );
 
-            saveSettings();
+            if (
+                Number(
+                    panelDraftSettings.glowStyle
+                ) === STYLE_INNER_AURA &&
+                nextEffect ===
+                    EFFECT_MOVING_COLORS
+            ) {
+                nextEffect =
+                    EFFECT_NONE;
+            }
+
+            panelDraftSettings.effect =
+                nextEffect;
+
+            effectSelect.value =
+                String(nextEffect);
+
+            markPanelDraftDirty(panel);
         });
+
+        updateGlowStyleUiState();
 
         const pulseInput = panel.querySelector('#sg-pulse');
         const pulseValue = panel.querySelector('#sg-pulse-value');
 
         pulseInput.addEventListener('input', event => {
-            settings.pulse = Math.max(
+            panelDraftSettings.pulse = Math.max(
                 0,
                 Math.min(5, Number(event.target.value) || 0)
             );
 
             if (pulseValue) {
-                pulseValue.textContent = settings.pulse;
+                pulseValue.textContent = panelDraftSettings.pulse;
             }
 
-            saveSettings();
+            markPanelDraftDirty(panel);
         });
 
         const soundSelect =
             panel.querySelector('#sg-sound');
 
         soundSelect.addEventListener('change', event => {
-            settings.sound = Math.max(
+            panelDraftSettings.sound = Math.max(
                 0,
                 Math.min(
                     18,
@@ -8215,7 +8859,7 @@ function createLegendaryTestWindow() {
                 )
             );
 
-            saveSettings();
+            markPanelDraftDirty(panel);
         });
 
         const volumeInput =
@@ -8225,7 +8869,7 @@ function createLegendaryTestWindow() {
             panel.querySelector('#sg-volume-value');
 
         volumeInput.addEventListener('input', event => {
-            settings.volume = Math.max(
+            panelDraftSettings.volume = Math.max(
                 0,
                 Math.min(
                     5,
@@ -8235,10 +8879,10 @@ function createLegendaryTestWindow() {
 
             if (volumeValue) {
                 volumeValue.textContent =
-                    settings.volume;
+                    panelDraftSettings.volume;
             }
 
-            saveSettings();
+            markPanelDraftDirty(panel);
         });
 
         panel
