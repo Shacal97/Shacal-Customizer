@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.3.4
+// @version      4.3.5
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://*.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
@@ -54,6 +54,7 @@
         volume: 3,
         dropMode: 'normal',
         itemFramesEnabled: false,
+        overrideGameItemFrames: true,
         itemFrameSet: 1,
         frameCommon: true,
         frameUnique: true,
@@ -241,6 +242,7 @@
 
         [
             'itemFramesEnabled',
+            'overrideGameItemFrames',
             'frameCommon',
             'frameUnique',
             'frameHeroic',
@@ -2078,9 +2080,12 @@
 
         const buildPresetCss = frame => {
             // Zwykłe oraz każda wyłączona ranga:
-            // brak naszej ramki, ale native Margonem frame nadal jest nadpisany.
+            // gdy nadpisywanie ramek gry jest WŁĄCZONE, chowamy natywną ramkę;
+            // gdy jest WYŁĄCZONE, nie dokładamy żadnego CSS i zostawiamy wygląd gry/innych dodatków.
             if (frame.rarity === 'common' || !frame.enabled) {
-                return transparentFrameCss();
+                return settings.overrideGameItemFrames
+                    ? transparentFrameCss()
+                    : '';
             }
 
             const c = frame.color;
@@ -2469,39 +2474,46 @@
                 const fallbackSelector =
                     `.item[data-item-type="${frame.fallback}"]:not(.bag)`;
 
-                return `
-                    ${raritySelector} > .highlight,
-                    ${fallbackSelector} > .highlight {
-                        display: none !important;
-                        visibility: hidden !important;
-                        opacity: 0 !important;
-                        background: none !important;
-                        background-image: none !important;
-                        border: 0 !important;
-                        outline: 0 !important;
-                        box-shadow: none !important;
-                        filter: none !important;
-                    }
+                const nativeFrameSuppressionCss =
+                    settings.overrideGameItemFrames
+                        ? `
+                            ${raritySelector} > .highlight,
+                            ${fallbackSelector} > .highlight {
+                                display: none !important;
+                                visibility: hidden !important;
+                                opacity: 0 !important;
+                                background: none !important;
+                                background-image: none !important;
+                                border: 0 !important;
+                                outline: 0 !important;
+                                box-shadow: none !important;
+                                filter: none !important;
+                            }
 
-                    /*
-                     * Nie kasuj ::before na przedmiotach posiadających ulepszenie.
-                     * Margonem / warstwa ramek wykorzystuje ten pseudo-element do
-                     * sygnalizowania stanu ulepszenia (data-frame-mania-upgrade >= 0).
-                     */
-                    ${raritySelector}:not([data-frame-mania-upgrade])::before,
-                    ${raritySelector}[data-frame-mania-upgrade="-1"]::before,
-                    ${fallbackSelector}:not([data-frame-mania-upgrade])::before,
-                    ${fallbackSelector}[data-frame-mania-upgrade="-1"]::before {
-                        content: none !important;
-                        display: none !important;
-                        opacity: 0 !important;
-                        background: none !important;
-                        background-image: none !important;
-                        border: 0 !important;
-                        outline: 0 !important;
-                        box-shadow: none !important;
-                        filter: none !important;
-                    }
+                            /*
+                             * Nie kasuj ::before na przedmiotach posiadających ulepszenie.
+                             * Margonem / warstwa ramek wykorzystuje ten pseudo-element do
+                             * sygnalizowania stanu ulepszenia (data-frame-mania-upgrade >= 0).
+                             */
+                            ${raritySelector}:not([data-frame-mania-upgrade])::before,
+                            ${raritySelector}[data-frame-mania-upgrade="-1"]::before,
+                            ${fallbackSelector}:not([data-frame-mania-upgrade])::before,
+                            ${fallbackSelector}[data-frame-mania-upgrade="-1"]::before {
+                                content: none !important;
+                                display: none !important;
+                                opacity: 0 !important;
+                                background: none !important;
+                                background-image: none !important;
+                                border: 0 !important;
+                                outline: 0 !important;
+                                box-shadow: none !important;
+                                filter: none !important;
+                            }
+                        `
+                        : '';
+
+                return `
+                    ${nativeFrameSuppressionCss}
 
                     ${raritySelector},
                     ${fallbackSelector} {
@@ -4856,6 +4868,7 @@
 
     let legendaryChatTrackerArmed = false;
     let legendaryChatProcessedLootNodes = new WeakSet();
+    let legendaryChatRetryingLootNodes = new WeakSet();
     const legendaryChatCandidates = new Map();
     const legendaryChatQueuedIds = new Set();
     const legendaryChatQueue = [];
@@ -5047,6 +5060,74 @@
         processLegendaryChatQueue();
     }
 
+    function tryAnnounceLegendaryLootElement(element, attempt = 0) {
+        if (
+            !settings.chatAnnouncementsEnabled ||
+            !legendaryChatTrackerArmed ||
+            !(element instanceof Element) ||
+            !element.isConnected ||
+            element.closest('.shacal-test-loot-window')
+        ) {
+            legendaryChatRetryingLootNodes.delete(element);
+            return;
+        }
+
+        const itemObject = getItemObjectFromElement(element);
+        const id = getItemIdFromElement(element, itemObject);
+
+        if (id && legendaryChatAnnouncedIds.has(id)) {
+            legendaryChatProcessedLootNodes.add(element);
+            legendaryChatRetryingLootNodes.delete(element);
+            return;
+        }
+
+        /*
+         * Docelowe zachowanie:
+         * legenda jest ogłaszana NATYCHMIAST z okna Łupy.
+         * Nie czekamy już, aż przedmiot trafi do ekwipunku.
+         */
+        if (id && itemObject?.hid) {
+            legendaryChatCandidates.set(id, {
+                hid: itemObject.hid,
+                createdAt: Date.now()
+            });
+
+            legendaryChatProcessedLootNodes.add(element);
+            legendaryChatRetryingLootNodes.delete(element);
+            enqueueLegendaryGlobalAnnouncement(id, itemObject);
+            return;
+        }
+
+        /*
+         * DOM okna łupu potrafi pojawić się ułamek sekundy wcześniej niż
+         * obiekt Item w jQuery.data(). Krótki retry pozwala złapać HID bez
+         * kosztownego skanowania całego DOM-u w każdej klatce.
+         */
+        if (attempt < 20) {
+            legendaryChatRetryingLootNodes.add(element);
+
+            setTimeout(() => {
+                tryAnnounceLegendaryLootElement(element, attempt + 1);
+            }, 100);
+
+            return;
+        }
+
+        legendaryChatRetryingLootNodes.delete(element);
+
+        /*
+         * Fallback: jeśli mamy ID, zostawiamy kandydata. Gdy wyjątkowo
+         * obiekt Item nie był dostępny w oknie łupu, stary mechanizm
+         * ekwipunkowy może nadal dokończyć wysłanie.
+         */
+        if (id) {
+            legendaryChatCandidates.set(id, {
+                hid: itemObject?.hid || null,
+                createdAt: Date.now()
+            });
+        }
+    }
+
     function scanLegendaryLootCandidates() {
         if (
             !settings.chatAnnouncementsEnabled ||
@@ -5059,21 +5140,14 @@
             '.loot-wnd:not(.shacal-test-loot-window) .item[data-item-type="t-leg"], ' +
             '.loot-wnd:not(.shacal-test-loot-window) .item[data-frame-mania-rarity="legendary"]'
         ).forEach(element => {
-            if (legendaryChatProcessedLootNodes.has(element)) return;
+            if (
+                legendaryChatProcessedLootNodes.has(element) ||
+                legendaryChatRetryingLootNodes.has(element)
+            ) {
+                return;
+            }
 
-            const itemObject = getItemObjectFromElement(element);
-            const id = getItemIdFromElement(element, itemObject);
-
-            if (!id) return;
-
-            legendaryChatProcessedLootNodes.add(element);
-
-            if (legendaryChatAnnouncedIds.has(id)) return;
-
-            legendaryChatCandidates.set(id, {
-                hid: itemObject?.hid || null,
-                createdAt: Date.now()
-            });
+            tryAnnounceLegendaryLootElement(element);
         });
     }
 
@@ -5116,6 +5190,7 @@
     function resetLegendaryChatTracker() {
         legendaryChatTrackerArmed = false;
         legendaryChatProcessedLootNodes = new WeakSet();
+        legendaryChatRetryingLootNodes = new WeakSet();
         legendaryChatCandidates.clear();
         legendaryChatQueue.length = 0;
         legendaryChatQueuedIds.clear();
@@ -5129,6 +5204,7 @@
          * Celowo ignorujemy wszystko, co już jest widoczne w chwili
          * włączenia funkcji. Dzięki temu aktywacja dodatku nie ogłasza
          * starych legend ani aktualnie otwartego, wcześniejszego łupu.
+         * Nowa legenda, która pojawi się później w oknie Łupy, jest wysyłana od razu.
          */
         document.querySelectorAll(
             '.loot-wnd:not(.shacal-test-loot-window) .item[data-item-type="t-leg"], ' +
@@ -6195,6 +6271,17 @@ function createLegendaryTestWindow() {
                 </div>
 
                 <div class="panel-section">
+                    <div class="section-title">Zgodność z ramkami gry</div>
+                    <div class="master-switch">
+                        <div class="master-copy">
+                            <span class="master-label">Nadpisuj ramki gry</span>
+                            <span class="hint">Wyłącz, aby zachować natywne ramki Margonem lub ramki z innych dodatków</span>
+                        </div>
+                        <input id="sg-override-game-item-frames" type="checkbox" ${settings.overrideGameItemFrames ? 'checked' : ''}>
+                    </div>
+                </div>
+
+                <div class="panel-section">
                     <div class="section-title">Styl ramki</div>
                     <div class="control-card wide">
                         <span class="control-label">Preset</span>
@@ -6649,6 +6736,7 @@ function createLegendaryTestWindow() {
         };
 
         bindFrameToggle('#sg-item-frames-enabled', 'itemFramesEnabled');
+        bindFrameToggle('#sg-override-game-item-frames', 'overrideGameItemFrames');
         bindFrameToggle('#sg-frame-common', 'frameCommon');
         bindFrameToggle('#sg-frame-unique', 'frameUnique');
         bindFrameToggle('#sg-frame-heroic', 'frameHeroic');
