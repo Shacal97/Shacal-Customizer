@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.3.7
+// @version      4.3.8
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://*.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
 // @updateURL    https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js
 // @downloadURL  https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @sandbox      raw
+// @connect      raw.githubusercontent.com
 // @connect      fonts.googleapis.com
 // @connect      fonts.gstatic.com
 // ==/UserScript==
@@ -30,7 +32,7 @@
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
 
     // Wersja i stały kanał aktualizacji Shacal Customizer.
-    const SHACAL_SCRIPT_VERSION = '4.3.7';
+    const SHACAL_SCRIPT_VERSION = '4.3.8';
     const SHACAL_UPDATE_URL =
         'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
 
@@ -2557,23 +2559,23 @@
          */
         return `
             .tip-wrapper.normal-tip[data-type="t_item"],
+            .tip-wrapper.normal-tip[data-type="t_item"] *,
             .tip-wrapper.cmp-tip[data-type="t_item"],
-            .tip-wrapper.normal-tip[data-type="t_item"],
             .tip-wrapper.cmp-tip[data-type="t_item"] * {
                 font-family: ${family} !important;
             }
 
-            .tip-wrapper.normal-tip[data-type="t_item"],
+            .tip-wrapper.normal-tip[data-type="t_item"] .tip-item-stat-item-name,
+            .tip-wrapper.normal-tip[data-type="t_item"] .item-name,
             .tip-wrapper.cmp-tip[data-type="t_item"] .tip-item-stat-item-name,
-            .tip-wrapper.normal-tip[data-type="t_item"],
             .tip-wrapper.cmp-tip[data-type="t_item"] .item-name {
                 font-weight: 700 !important;
                 letter-spacing: .10px;
             }
 
-            .tip-wrapper.normal-tip[data-type="t_item"],
+            .tip-wrapper.normal-tip[data-type="t_item"] .tip-item-stat-rarity,
+            .tip-wrapper.normal-tip[data-type="t_item"] .item-rarity,
             .tip-wrapper.cmp-tip[data-type="t_item"] .tip-item-stat-rarity,
-            .tip-wrapper.normal-tip[data-type="t_item"],
             .tip-wrapper.cmp-tip[data-type="t_item"] .item-rarity {
                 font-weight: 600 !important;
             }
@@ -2689,7 +2691,7 @@
                             0 0 0 1px ${c},
                             0 0 4px ${b},
                             0 0 7px ${g},
-                            0 0 27px ${g},
+                            0 0 14px ${g},
                             inset 0 0 0 1px rgba(0,0,0,.72) !important;
                     `;
                 case 3: // Crystal Veil
@@ -2699,7 +2701,7 @@
                         box-shadow:
                             0 0 3px ${b},
                             0 0 9px ${g},
-                            0 0 29px ${g},
+                            0 0 14px ${g},
                             inset 0 0 0 1px ${c} !important;
                     `;
                 case 7: // Royal Crest
@@ -2709,7 +2711,7 @@
                         box-shadow:
                             0 0 0 1px ${d},
                             0 0 7px ${g},
-                            0 0 27px ${g},
+                            0 0 14px ${g},
                             inset 0 0 0 1px ${c} !important;
                     `;
                 case 8: // Hexed Edge
@@ -2720,7 +2722,7 @@
                             0 0 0 1px ${c},
                             0 0 4px ${b},
                             0 0 10px ${g},
-                            0 0 30px ${g} !important;
+                            0 0 14px ${g} !important;
                     `;
                 case 9: // Clean Line
                     return `
@@ -2728,7 +2730,7 @@
                         outline-offset: 0 !important;
                         box-shadow:
                             0 0 2px ${g},
-                            0 0 28px ${g} !important;
+                            0 0 14px ${g} !important;
                     `;
                 case 11: // Emberglass
                     return `
@@ -2736,7 +2738,7 @@
                         outline-offset: 0 !important;
                         box-shadow:
                             0 0 5px ${g},
-                            0 0 25px ${g},
+                            0 0 13px ${g},
                             inset 0 0 0 1px ${d} !important;
                     `;
                 case 12: // Abyssal Forge
@@ -2747,7 +2749,7 @@
                             0 0 0 1px ${c},
                             0 0 4px ${b},
                             0 0 6px ${g},
-                            0 0 26px ${g},
+                            0 0 13px ${g},
                             inset 0 0 6px rgba(0,0,0,.38) !important;
                     `;
                 case 13: // Prismheart
@@ -2757,7 +2759,7 @@
                         box-shadow:
                             0 0 4px ${b},
                             0 0 8px ${g},
-                            0 0 28px ${g} !important;
+                            0 0 14px ${g} !important;
                     `;
                 case 14: // Sovereign Core
                     return `
@@ -2767,7 +2769,7 @@
                             0 0 0 1px ${b},
                             0 0 4px ${b},
                             0 0 7px ${g},
-                            0 0 27px ${g} !important;
+                            0 0 14px ${g} !important;
                     `;
                 case 17: // Nightfall
                     return `
@@ -2777,7 +2779,7 @@
                             0 0 0 1px ${c},
                             0 0 4px ${b},
                             0 0 5px ${g},
-                            0 0 25px ${g} !important;
+                            0 0 13px ${g} !important;
                     `;
                 case 18: // Void Ember
                     return `
@@ -2786,7 +2788,7 @@
                         box-shadow:
                             0 0 2px ${b},
                             0 0 8px ${g},
-                            0 0 28px ${g},
+                            0 0 14px ${g},
                             inset 0 0 0 1px ${d} !important;
                     `;
                 case 19: // Blackthorn
@@ -2842,7 +2844,7 @@
                             0 0 0 1px ${c},
                             0 0 4px ${b},
                             0 0 6px ${g},
-                            0 0 26px ${g},
+                            0 0 13px ${g},
                             inset 0 0 0 1px ${d} !important;
                     `;
                 case 1:
@@ -2852,7 +2854,7 @@
                         outline-offset: 0 !important;
                         box-shadow:
                             0 0 6px ${g},
-                            0 0 26px ${g},
+                            0 0 13px ${g},
                             inset 0 0 0 1px ${d} !important;
                     `;
             }
@@ -2909,10 +2911,7 @@
                     `.tip-wrapper.cmp-tip[data-item-type="${frame.fallback}"]`;
 
                 return `
-                    .tip-wrapper.normal-tip[data-type="t_item"],
-            .tip-wrapper.cmp-tip[data-type="t_item"][data-item-type="${frame.fallback}"],
                     ${normalRoot},
-                    .tip-wrapper.cmp-tip[data-type="t_item"][data-item-type="${frame.fallback}"],
                     ${comparisonRoot} {
                         ${styleFor(frame)}
                         ${outerGlowOffCss(frame)}
@@ -4496,6 +4495,18 @@
                     width: min(470px, calc(100vw - 20px));
                     right: 10px;
                 }
+            }
+
+            /*
+             * Dymki są stale przesuwane przez silnik gry podczas hoveru.
+             * Osobna warstwa kompozytora + ograniczenie pracy paint pomaga
+             * szczególnie przy dwóch dymkach porównania naraz.
+             */
+            .tip-wrapper.normal-tip[data-type="t_item"],
+            .tip-wrapper.cmp-tip[data-type="t_item"] {
+                transform: translateZ(0);
+                backface-visibility: hidden;
+                will-change: left, top;
             }
 
             ${buildItemRarityFrameCss()}
@@ -6266,9 +6277,15 @@ function createLegendaryTestWindow() {
 
         if (shacalUpdateState.error) {
             status.textContent = 'błąd sprawdzania';
+            status.title = shacalUpdateState.error;
+            button.title =
+                `Nie udało się sprawdzić aktualizacji: ${shacalUpdateState.error}`;
             status.classList.add('is-error');
             return;
         }
+
+        status.title = '';
+        button.title = 'Sprawdź dostępność nowej wersji Shacal Customizer';
 
         if (shacalUpdateState.checked) {
             status.textContent = 'masz najnowszą';
@@ -6302,23 +6319,47 @@ function createLegendaryTestWindow() {
                         ? '&'
                         : '?';
 
-                const response = await fetch(
-                    `${SHACAL_UPDATE_URL}${separator}shacal_check=${Date.now()}`,
-                    {
-                        method: 'GET',
-                        cache: 'no-store',
-                        credentials: 'omit'
-                    }
-                );
+                const requestUrl =
+                    `${SHACAL_UPDATE_URL}${separator}shacal_check=${Date.now()}`;
 
-                if (!response.ok) {
+                const response = await new Promise((resolve, reject) => {
+                    if (typeof GM_xmlhttpRequest !== 'function') {
+                        reject(
+                            new Error('Brak GM_xmlhttpRequest')
+                        );
+                        return;
+                    }
+
+                    GM_xmlhttpRequest({
+                        method: 'GET',
+                        url: requestUrl,
+                        nocache: true,
+                        timeout: 8000,
+                        anonymous: true,
+                        onload: resolve,
+                        onerror: () =>
+                            reject(
+                                new Error('Błąd połączenia z GitHubem')
+                            ),
+                        ontimeout: () =>
+                            reject(
+                                new Error('Przekroczono czas połączenia')
+                            )
+                    });
+                });
+
+                if (
+                    !response ||
+                    response.status < 200 ||
+                    response.status >= 300
+                ) {
                     throw new Error(
-                        `HTTP ${response.status}`
+                        `HTTP ${response?.status || 0}`
                     );
                 }
 
                 const source =
-                    await response.text();
+                    response.responseText || '';
 
                 const remoteVersion =
                     readVersionFromUserscriptSource(source);
