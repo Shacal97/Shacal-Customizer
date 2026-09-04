@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      4.3.6
+// @version      4.3.7
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://*.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
@@ -30,7 +30,7 @@
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
 
     // Wersja i stały kanał aktualizacji Shacal Customizer.
-    const SHACAL_SCRIPT_VERSION = '4.3.6';
+    const SHACAL_SCRIPT_VERSION = '4.3.7';
     const SHACAL_UPDATE_URL =
         'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
 
@@ -5639,36 +5639,185 @@
         });
     }
 
+    let lootWindowSyncQueued = false;
+    let legendaryChatScanQueued = false;
+
+    function queueLootWindowSync() {
+        if (lootWindowSyncQueued) return;
+
+        lootWindowSyncQueued = true;
+
+        requestAnimationFrame(() => {
+            lootWindowSyncQueued = false;
+            updateLootWindows();
+        });
+    }
+
+    function queueLegendaryChatScan() {
+        if (
+            legendaryChatScanQueued ||
+            !settings.chatAnnouncementsEnabled
+        ) {
+            return;
+        }
+
+        legendaryChatScanQueued = true;
+
+        requestAnimationFrame(() => {
+            legendaryChatScanQueued = false;
+            scanLegendaryChatTracker();
+        });
+    }
+
+    function nodeTouchesSelector(node, selector) {
+        if (!(node instanceof Element)) {
+            return false;
+        }
+
+        return !!(
+            node.matches?.(selector) ||
+            node.querySelector?.(selector)
+        );
+    }
+
     const observer = new MutationObserver(mutations => {
         let shouldSyncUpgradeBadges = false;
+        let shouldSyncLootWindows = false;
+        let shouldScanLegendaryChat = false;
 
         for (const mutation of mutations) {
-            if (
-                mutation.type === 'attributes' &&
-                mutation.attributeName === 'data-upgrade'
-            ) {
-                shouldSyncUpgradeBadges = true;
-                break;
-            }
-
-            if (mutation.type === 'childList') {
-                const changedNodes = [
-                    ...mutation.addedNodes,
-                    ...mutation.removedNodes
-                ];
+            if (mutation.type === 'attributes') {
+                const target =
+                    mutation.target instanceof Element
+                        ? mutation.target
+                        : null;
 
                 if (
-                    changedNodes.some(node =>
-                        node instanceof Element &&
-                        (
-                            node.matches?.('.item[data-upgrade]') ||
-                            node.querySelector?.('.item[data-upgrade]')
-                        )
-                    )
+                    mutation.attributeName === 'data-upgrade' &&
+                    target?.matches?.('.item')
                 ) {
                     shouldSyncUpgradeBadges = true;
-                    break;
                 }
+
+                /*
+                 * Atrybuty obserwujemy tylko na itemach. Dymki przedmiotów
+                 * nie powinny przez samo pojawienie się wywoływać skanowania
+                 * okien łupu ani całego ekwipunku.
+                 */
+                if (
+                    target?.closest?.('.loot-wnd') &&
+                    (
+                        mutation.attributeName === 'data-frame-mania-rarity' ||
+                        mutation.attributeName === 'data-item-type' ||
+                        mutation.attributeName === 'data-frame-mania-upgrade'
+                    )
+                ) {
+                    shouldSyncLootWindows = true;
+                }
+
+                if (
+                    settings.chatAnnouncementsEnabled &&
+                    target?.matches?.('.item') &&
+                    (
+                        target.closest?.('.loot-wnd') ||
+                        target.matches?.('.inventory-item')
+                    ) &&
+                    (
+                        mutation.attributeName === 'data-frame-mania-rarity' ||
+                        mutation.attributeName === 'data-item-type'
+                    )
+                ) {
+                    shouldScanLegendaryChat = true;
+                }
+
+                continue;
+            }
+
+            if (mutation.type !== 'childList') {
+                continue;
+            }
+
+            const target =
+                mutation.target instanceof Element
+                    ? mutation.target
+                    : mutation.target?.parentElement;
+
+            const changedNodes = [
+                ...mutation.addedNodes,
+                ...mutation.removedNodes
+            ];
+
+            if (
+                !shouldSyncUpgradeBadges &&
+                changedNodes.some(node =>
+                    nodeTouchesSelector(
+                        node,
+                        '.item[data-upgrade]'
+                    )
+                )
+            ) {
+                shouldSyncUpgradeBadges = true;
+            }
+
+            /*
+             * Najważniejsza optymalizacja v4.3.7:
+             * wcześniejsza wersja odpalała updateLootWindows() oraz
+             * scanLegendaryChatTracker() przy KAŻDEJ mutacji DOM.
+             * Margonem tworzy/usuwa dymek przy przejeżdżaniu kursorem
+             * nad itemem, więc każdy hover powodował niepotrzebne
+             * querySelectorAll po innych częściach interfejsu.
+             */
+            if (
+                !shouldSyncLootWindows &&
+                (
+                    target?.closest?.('.loot-wnd') ||
+                    changedNodes.some(node =>
+                        nodeTouchesSelector(node, '.loot-wnd')
+                    )
+                )
+            ) {
+                shouldSyncLootWindows = true;
+            }
+
+            if (
+                settings.chatAnnouncementsEnabled &&
+                !shouldScanLegendaryChat &&
+                (
+                    target?.closest?.('.loot-wnd') ||
+                    target?.closest?.('.inventory') ||
+                    target?.matches?.('.inventory') ||
+                    changedNodes.some(node =>
+                        nodeTouchesSelector(
+                            node,
+                            '.loot-wnd .item, .inventory-item'
+                        )
+                    )
+                )
+            ) {
+                shouldScanLegendaryChat = true;
+            }
+
+            if (settings.chatEmoticonsEnabled) {
+                mutation.addedNodes.forEach(node => {
+                    /*
+                     * Dymki itemów nie są czatem. Ominięcie ich tutaj
+                     * redukuje dodatkową pracę TreeWalkera podczas hoveru.
+                     */
+                    const element =
+                        node instanceof Element
+                            ? node
+                            : node?.parentElement;
+
+                    if (
+                        element?.closest?.(
+                            '.tip-wrapper.normal-tip, .tip-wrapper.cmp-tip'
+                        )
+                    ) {
+                        return;
+                    }
+
+                    renderChatEmoticonsInRoot(node);
+                });
             }
         }
 
@@ -5676,20 +5825,13 @@
             queueUpgradeBadgeSync();
         }
 
-        if (settings.chatEmoticonsEnabled) {
-            for (const mutation of mutations) {
-                if (mutation.type !== 'childList') {
-                    continue;
-                }
-
-                mutation.addedNodes.forEach(node => {
-                    renderChatEmoticonsInRoot(node);
-                });
-            }
+        if (shouldSyncLootWindows) {
+            queueLootWindowSync();
         }
 
-        updateLootWindows();
-        scanLegendaryChatTracker();
+        if (shouldScanLegendaryChat) {
+            queueLegendaryChatScan();
+        }
     });
 
     observer.observe(document.body, {
