@@ -1,114 +1,122 @@
-# Shacal Customizer
+<div align="center">
 
-**Rozbudowany pakiet personalizacji interfejsu Margonem dla nowego silnika.**
+# SHACAL CUSTOMIZER
 
-Shacal Customizer pozwala dostosować wygląd gry bez ingerowania w mechanikę rozgrywki.  
-Dodatek działa jako userscript przez Tampermonkey.
+### Personalizacja interfejsu Margonem w jednym dodatku
 
----
+**GLOW • RAMKI • DYMKI • DŹWIĘKI • CZAT • OZNACZENIA ULEPSZEŃ**
 
-## ⚡ INSTALACJA
+Shacal Customizer to userscript do nowego interfejsu Margonem, który pozwala ustawić wygląd i zachowanie najważniejszych elementów UI bez instalowania kilku osobnych dodatków.
 
-### ➜ [ZAINSTALUJ SHACAL CUSTOMIZER](https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js)
+Aktualna wersja: **4.6.2**
 
-Po kliknięciu linku Tampermonkey powinien automatycznie otworzyć ekran instalacji skryptu.
-
-### Wymagania
-
-Przed instalacją upewnij się, że masz zainstalowane rozszerzenie **Tampermonkey**.
-
-1. Zainstaluj Tampermonkey w swojej przeglądarce.
-2. Kliknij przycisk **ZAINSTALUJ SHACAL CUSTOMIZER** powyżej.
-3. W Tampermonkey wybierz **Zainstaluj**.
-4. Uruchom lub odśwież Margonem.
-5. Gotowe!
+</div>
 
 ---
 
-## ✦ Funkcje
+## Co znajdziesz w dodatku?
 
-### GLOW
-Personalizacja efektów pojawiających się przy zdobywaniu przedmiotów.
+### GLOW — efekty zdobywanego łupu
 
-- różne style efektów
-- regulacja intensywności
-- animacje
-- efekty dla przedmiotów legendarnych
-- własne dźwięki zdobycia przedmiotu
+Rozbudowany system podświetlenia okna łupu z własną konfiguracją efektu.
 
-### RAMKI
-Rozbudowana personalizacja ramek przedmiotów.
+- tryb dla zwykłego testu lub wyłącznie legendarnych przedmiotów,
+- dwa style: **Classic Glow** oraz **Neon 80s**,
+- trzy niezależne warstwy koloru,
+- osobna regulacja siły, krycia i szerokości każdej warstwy,
+- efekty:
+  - brak animacji,
+  - pulsowanie,
+  - magiczne migotanie,
+  - przesuwające się kolory,
+- podświetlenie dopasowane do okna łupu i elementów przedmiotu.
 
-- wiele stylów ramek
-- osobne ustawienia dla różnych rang przedmiotów
-- unikatowe
-- heroiczne
-- ulepszone
-- legendarne
-- oznaczenia poziomu ulepszenia przedmiotu
-- synchronizacja koloru oznaczenia z rangą przedmiotu
-
-### DYMKI
-Personalizacja okien informacji o przedmiotach.
-
-- własne style
-- kolory zależne od rangi przedmiotu
-- efekty zewnętrzne
-- wybór czcionki
-- osobne ustawienia dla poszczególnych rang
-
-### CZAT
-Dodatkowe możliwości wizualne czatu.
-
-- emotikony Shacal Customizer
-- katalog dostępnych emotikon
-- automatyczne wyświetlanie kodów `:emotki:`
-- komunikaty o zdobytych przedmiotach legendarnych
+Wszystkie ustawienia można sprawdzić bez czekania na prawdziwy drop dzięki wbudowanemu przyciskowi **TEST**.
 
 ---
 
-## 🔄 Aktualizacje
+### Dźwięk legendarnego przedmiotu
 
-Shacal Customizer posiada system aktualizacji przez Tampermonkey.
+Legendarny drop może mieć własny efekt dźwiękowy.
 
-Po jednorazowym zainstalowaniu dodatku **nie musisz pobierać kolejnych wersji ręcznie**.
+Do wyboru jest obecnie **18 dźwięków** oraz opcja całkowitego wyłączenia audio.
 
-Gdy pojawi się nowa wersja, Tampermonkey może wykryć ją poprzez system aktualizacji userscriptów.
+- wybór dźwięku bezpośrednio z panelu,
+- regulacja głośności,
+- odsłuch przez **TEST**,
+- ponowne kliknięcie TEST zatrzymuje poprzedni podgląd i uruchamia nowy od początku,
+- prawdziwe dropy korzystają z osobnego mechanizmu i nie są blokowane przez podgląd.
 
-Twoje zapisane ustawienia Shacal Customizer pozostają zachowane podczas aktualizacji.
-
----
-
-## 🎮 Uruchamianie
-
-Po wejściu do Margonem na ekranie pojawi się ikona **SC**.
-
-Kliknij ją, aby otworzyć panel:
-
-**Shacal Customizer**
-
-Panel został podzielony na:
-
-`GLOW` • `RAMKI` • `DYMKI` • `CZAT`
+Dźwięki są zapisane bezpośrednio w userscripcie — nie trzeba pobierać dodatkowych paczek.
 
 ---
 
-## ⚠️ Informacje
+### RAMKI — własny wygląd przedmiotów
 
-Shacal Customizer jest dodatkiem tworzonym niezależnie dla graczy Margonem.
+Shacal Customizer może zastąpić standardowe ramki przedmiotów własnym zestawem.
 
-Dodatek skupia się na personalizacji wizualnej interfejsu i nie jest oficjalnym dodatkiem twórców Margonem.
+Dostępne są **23 zestawy ramek**, między innymi:
+
+`Classic Glow` · `Shadowbound` · `Crystal Veil` · `Royal Crest` · `Hexed Edge` · `Abyssal Forge` · `Prismheart` · `Nightfall` · `Crimson Oath` · `Infernal Crown` · `Blood Moon` · `Dragonfire` · `Toxic Flame` · `Arcane Glass`
+
+Ramki można włączać osobno dla:
+
+| Rzadkość | Obsługa |
+|---|:---:|
+| Zwykły | ✓ |
+| Unikatowy | ✓ |
+| Heroiczny | ✓ |
+| Ulepszony | ✓ |
+| Legendarny | ✓ |
+
+Jeżeli korzystasz z natywnych ramek Margonem albo innego dodatku, możesz wyłączyć opcję **„Nadpisuj ramki gry”** i zachować ich wygląd.
 
 ---
 
-## 👤 Autor
+### Oznaczenia poziomu ulepszenia
 
-**Shacal**
+Poziom ulepszenia przedmiotu może być widoczny bez otwierania jego dymka.
 
-GitHub: **Shacal97**
+- poziomy od `0` wzwyż,
+- **16 stylów oznaczenia**,
+- możliwość automatycznego dopasowania koloru do rzadkości przedmiotu,
+- oznaczenie pozostaje przypisane do konkretnego itemu i porusza się razem z interfejsem.
+
+Funkcja jest opcjonalna i można ją całkowicie wyłączyć.
 
 ---
 
-### ➜ [ZAINSTALUJ SHACAL CUSTOMIZER](https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js)
+### DYMKI — wygląd tooltipów przedmiotów
 
-*Jedna instalacja. Kolejne wersje przez system aktualizacji Tampermonkey.*
+Dymki przedmiotów mogą korzystać z tej samej stylistyki co ramki albo z osobnego zestawu.
+
+Możesz ustawić:
+
+- osobny zestaw wyglądu dymków lub synchronizację z ramkami,
+- kolorowanie tekstu zgodnie z rzadkością,
+- zewnętrzną poświatę,
+- własną czcionkę,
+- osobne włączanie wyglądu dla:
+  - unikatów,
+  - heroików,
+  - ulepszonych,
+  - legend.
+
+Dostępne czcionki:
+
+`Domyślna` · `Cinzel` · `Cormorant` · `Vollkorn` · `Spectral` · `Bree Serif` · `Alegreya` · `Playfair Display` · `Grenze` · `Lora` · `Merriweather`
+
+---
+
+### CZAT — legendy i własne emotikony
+
+Panel CZAT zawiera dwa niezależne moduły.
+
+**Ogłaszanie legend**
+
+Po zdobyciu legendarnego przedmiotu dodatek może automatycznie wysłać wiadomość na kanał GLOBAL.
+
+Treść wiadomości ustawiasz samodzielnie. W miejscu:
+
+```text
+{ITEM}
