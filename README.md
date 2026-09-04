@@ -6,9 +6,11 @@
 
 **GLOW • RAMKI • DYMKI • DŹWIĘKI • CZAT • OZNACZENIA ULEPSZEŃ**
 
-Shacal Customizer to userscript do nowego interfejsu Margonem, który pozwala ustawić wygląd i zachowanie najważniejszych elementów UI bez instalowania kilku osobnych dodatków.
+[**▶ ZAINSTALUJ SHACAL CUSTOMIZER**](https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js)
 
 Aktualna wersja: **4.6.2**
+
+Shacal Customizer to userscript do nowego interfejsu Margonem, który pozwala ustawić wygląd i zachowanie najważniejszych elementów UI bez instalowania kilku osobnych dodatków.
 
 </div>
 
