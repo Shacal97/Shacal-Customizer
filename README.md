@@ -1,124 +1,49 @@
-<div align="center">
+# Shacal Customizer
 
-# SHACAL CUSTOMIZER
+Shacal Customizer to pakiet personalizacji interfejsu Margonem przygotowany dla świata Solphyr.
 
-### Personalizacja interfejsu Margonem w jednym dodatku
+Aktualna wersja: 5.0
 
-**GLOW • RAMKI • DYMKI • DŹWIĘKI • CZAT • OZNACZENIA ULEPSZEŃ**
+## Główne funkcje
 
-[**▶ ZAINSTALUJ SHACAL CUSTOMIZER**](https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js)
+**GLOW**
 
-Aktualna wersja: **4.6.2**
+Efekty wizualne dla okna łupu i mapy. Dostępne są style Classic, Neon 80s oraz Inner Aura wraz z regulacją kolorów, intensywności, szerokości i animacji.
 
-Shacal Customizer to userscript do nowego interfejsu Margonem, który pozwala ustawić wygląd i zachowanie najważniejszych elementów UI bez instalowania kilku osobnych dodatków.
+**Ramki i dymki**
 
-</div>
+Własne zestawy ramek przedmiotów, zmiana wyglądu tooltipów, kolory rzadkości oraz dodatkowe fonty.
 
----
+**Poziom ulepszenia**
 
-## Co znajdziesz w dodatku?
+Czytelne oznaczenia poziomu ulepszenia przedmiotów z możliwością dopasowania wyglądu do rzadkości.
 
-### GLOW — efekty zdobywanego łupu
+**Dźwięki**
 
-Rozbudowany system podświetlenia okna łupu z własną konfiguracją efektu.
+Własne dźwięki dla łupu oraz osobny tryb testowy w panelu ustawień.
 
-- tryb dla zwykłego testu lub wyłącznie legendarnych przedmiotów,
-- dwa style: **Classic Glow** oraz **Neon 80s**,
-- trzy niezależne warstwy koloru,
-- osobna regulacja siły, krycia i szerokości każdej warstwy,
-- efekty:
-  - brak animacji,
-  - pulsowanie,
-  - magiczne migotanie,
-  - przesuwające się kolory,
-- podświetlenie dopasowane do okna łupu i elementów przedmiotu.
+**Czat**
 
-Wszystkie ustawienia można sprawdzić bez czekania na prawdziwy drop dzięki wbudowanemu przyciskowi **TEST**.
+Opcjonalne automatyczne ogłoszenie zdobytej legendy oraz zestaw emotek wyświetlanych bezpośrednio na czacie.
 
----
+**Panel Shacal Customizer**
 
-### Dźwięk legendarnego przedmiotu
+Przenośna ikona otwierająca panel, zapis ustawień, podgląd TEST oraz wbudowane sprawdzanie aktualizacji.
 
-Legendarny drop może mieć własny efekt dźwiękowy.
+## Instalacja
 
-Do wyboru jest obecnie **18 dźwięków** oraz opcja całkowitego wyłączenia audio.
+1. Zainstaluj rozszerzenie Tampermonkey w swojej przeglądarce.
 
-- wybór dźwięku bezpośrednio z panelu,
-- regulacja głośności,
-- odsłuch przez **TEST**,
-- ponowne kliknięcie TEST zatrzymuje poprzedni podgląd i uruchamia nowy od początku,
-- prawdziwe dropy korzystają z osobnego mechanizmu i nie są blokowane przez podgląd.
+2. Kliknij [Zainstaluj Shacal Customizer](https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js).
 
-Dźwięki są zapisane bezpośrednio w userscripcie — nie trzeba pobierać dodatkowych paczek.
+3. Potwierdź instalację skryptu w Tampermonkey.
 
----
+Po instalacji uruchom świat Solphyr. Ikona Shacal Customizer pojawi się w interfejsie gry.
 
-### RAMKI — własny wygląd przedmiotów
+## Aktualizacje
 
-Shacal Customizer może zastąpić standardowe ramki przedmiotów własnym zestawem.
+Skrypt posiada własne sprawdzanie dostępności nowej wersji. Aktualizacje korzystają z pliku Shacal_Customizer.user.js znajdującego się w tym repozytorium.
 
-Dostępne są **23 zestawy ramek**, między innymi:
+## Autor
 
-`Classic Glow` · `Shadowbound` · `Crystal Veil` · `Royal Crest` · `Hexed Edge` · `Abyssal Forge` · `Prismheart` · `Nightfall` · `Crimson Oath` · `Infernal Crown` · `Blood Moon` · `Dragonfire` · `Toxic Flame` · `Arcane Glass`
-
-Ramki można włączać osobno dla:
-
-| Rzadkość | Obsługa |
-|---|:---:|
-| Zwykły | ✓ |
-| Unikatowy | ✓ |
-| Heroiczny | ✓ |
-| Ulepszony | ✓ |
-| Legendarny | ✓ |
-
-Jeżeli korzystasz z natywnych ramek Margonem albo innego dodatku, możesz wyłączyć opcję **„Nadpisuj ramki gry”** i zachować ich wygląd.
-
----
-
-### Oznaczenia poziomu ulepszenia
-
-Poziom ulepszenia przedmiotu może być widoczny bez otwierania jego dymka.
-
-- poziomy od `0` wzwyż,
-- **16 stylów oznaczenia**,
-- możliwość automatycznego dopasowania koloru do rzadkości przedmiotu,
-- oznaczenie pozostaje przypisane do konkretnego itemu i porusza się razem z interfejsem.
-
-Funkcja jest opcjonalna i można ją całkowicie wyłączyć.
-
----
-
-### DYMKI — wygląd tooltipów przedmiotów
-
-Dymki przedmiotów mogą korzystać z tej samej stylistyki co ramki albo z osobnego zestawu.
-
-Możesz ustawić:
-
-- osobny zestaw wyglądu dymków lub synchronizację z ramkami,
-- kolorowanie tekstu zgodnie z rzadkością,
-- zewnętrzną poświatę,
-- własną czcionkę,
-- osobne włączanie wyglądu dla:
-  - unikatów,
-  - heroików,
-  - ulepszonych,
-  - legend.
-
-Dostępne czcionki:
-
-`Domyślna` · `Cinzel` · `Cormorant` · `Vollkorn` · `Spectral` · `Bree Serif` · `Alegreya` · `Playfair Display` · `Grenze` · `Lora` · `Merriweather`
-
----
-
-### CZAT — legendy i własne emotikony
-
-Panel CZAT zawiera dwa niezależne moduły.
-
-**Ogłaszanie legend**
-
-Po zdobyciu legendarnego przedmiotu dodatek może automatycznie wysłać wiadomość na kanał GLOBAL.
-
-Treść wiadomości ustawiasz samodzielnie. W miejscu:
-
-```text
-{ITEM}
+Shacal
