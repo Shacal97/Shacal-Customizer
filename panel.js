@@ -1,9 +1,9 @@
-/* Shacal core 6.3.4 */
+/* Shacal core 6.3.5 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.3.4';
+ctx.SHACAL_SCRIPT_VERSION = '6.3.5';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -439,7 +439,11 @@ ctx.createLegendaryTestWindow = function createLegendaryTestWindow() {
         return test;
     };
 ctx.closeLegendaryTestWindow = function closeLegendaryTestWindow() {
-        document .querySelectorAll('.shacal-test-loot-window') .forEach(el => el.remove());
+        document.querySelectorAll('.shacal-test-loot-window').forEach(el => {
+            ctx.removeGlowOverlay(el);
+            el.remove();
+        });
+        ctx.syncMapGlowOverlay();
     };
 ctx.escapeHtml = function escapeHtml(value) {
         return String(value ?? '') .replace(/&/g, '&amp;') .replace(/</g, '&lt;') .replace(/>/g, '&gt;') .replace(/"/g, '&quot;') .replace(/'/g, '&#039;');

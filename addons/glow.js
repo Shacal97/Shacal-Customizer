@@ -1,4 +1,4 @@
-/* Shacal glow 6.3.4 */
+/* Shacal glow 6.3.5 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/glow.js", {declare(ctx){ctx.stopAutomaticLootSounds = function stopAutomaticLootSounds() {
         for(const audio of ctx.activeLootSounds){try{audio.pause();audio.currentTime=0;audio.removeAttribute('src');audio.load();}catch{}}
@@ -380,7 +380,7 @@ ctx.drawEnergyFrame = function drawEnergyFrame(overlay) {
     const layers = [1,2,3].map(i => ({color:ctx.settings['color'+i], width:ctx.clampLevel(ctx.settings['width'+i]), glow:ctx.clampLevel(ctx.settings['glow'+i]), opacity:ctx.opacityLevel(ctx.settings['opacity'+i])})).filter(l => l.width > 0 && l.glow > 0 && l.opacity > 0);
     const w = Math.max(0,parseFloat(overlay.style.width)||0), h = Math.max(0,parseFloat(overlay.style.height)||0);
     const d = Math.min(window.devicePixelRatio || 1, 2), effect = Number(ctx.settings.effect);
-    const moving = effect !== 0 && ctx.clampLevel(ctx.settings.pulse) > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const moving = ctx.clampLevel(ctx.settings.pulse) > 0;
     const signature = JSON.stringify([w,h,d,layers,effect,ctx.settings.pulse]);
     const dt = entry.last ? Math.min((now-entry.last)/1000,.05) : 0;
     entry.last = now;
@@ -1063,9 +1063,11 @@ ctx.requestGlowOverlayFrame = function requestGlowOverlayFrame() {
             return;
         }
         ctx.glowOverlayFrameRequested = true;
-        requestAnimationFrame(ctx.syncAllGlowOverlays);
+        ctx.glowOverlayTimer = setTimeout(ctx.syncAllGlowOverlays, 33);
     };
 ctx.syncAllGlowOverlays = function syncAllGlowOverlays() {
+        clearTimeout(ctx.glowOverlayTimer);
+        ctx.glowOverlayTimer = null;
         ctx.glowOverlayFrameRequested = false;
         for (const [windowElement, overlay] of ctx.glowOverlayMap.entries()) {
             if ( !windowElement.isConnected || !document.body.contains(windowElement) ) {
