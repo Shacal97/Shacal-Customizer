@@ -1,4 +1,4 @@
-/* Shacal przelogowanie 6.3.5 */
+/* Shacal przelogowanie 6.3.6 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/relogger.js", {declare(ctx){ctx.selectFirstE2PerCharacter = function selectFirstE2PerCharacter(timers,scope){
         if(!ctx.firstE2Memory){

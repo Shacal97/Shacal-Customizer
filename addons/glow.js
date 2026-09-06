@@ -1,4 +1,4 @@
-/* Shacal glow 6.3.5 */
+/* Shacal glow 6.3.6 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/glow.js", {declare(ctx){ctx.stopAutomaticLootSounds = function stopAutomaticLootSounds() {
         for(const audio of ctx.activeLootSounds){try{audio.pause();audio.currentTime=0;audio.removeAttribute('src');audio.load();}catch{}}
@@ -578,10 +578,12 @@ ctx.syncItemGlowAnimations = function syncItemGlowAnimations(windowElement) {
         });
     };
 ctx.findMapBoundsElement = function findMapBoundsElement() {
+        const isEffect = element => !!element.closest('.shacal-glow-overlay, .shacal-map-neon-frame, .shacal-energy-canvas');
         const selectors = [ '.map-wrapper', '.map-layer', '.game-window', '[class*="map-wrapper"]', '[class*="map-layer"]' ];
         const candidates = [];
         selectors.forEach((selector, priority) => {
             document.querySelectorAll(selector).forEach(element => {
+                if (isEffect(element)) return;
                 const rect = element.getBoundingClientRect();
                 if ( rect.width >= 300 && rect.height >= 200 && rect.right > 0 && rect.bottom > 0 && rect.left < window.innerWidth && rect.top < window.innerHeight ) {
                     candidates.push({
@@ -599,7 +601,7 @@ ctx.findMapBoundsElement = function findMapBoundsElement() {
             });
             return candidates[0].element;
         }
-        const canvases = Array.from(document.querySelectorAll('canvas')) .map(element => ({
+        const canvases = Array.from(document.querySelectorAll('canvas')).filter(element => !isEffect(element)) .map(element => ({
                     element, rect: element.getBoundingClientRect()
                 })) .filter(({ rect }) => rect.width >= 300 && rect.height >= 200 && rect.right > 0 && rect.bottom > 0 ) .sort( (a, b) => b.rect.width * b.rect.height -
                         a.rect.width * a.rect.height );
@@ -621,6 +623,9 @@ ctx.ensureMapGlowOverlay = function ensureMapGlowOverlay( mapElement ) {
         const gameLayer = ctx.getMapGlowGameLayer( mapElement );
         const host = ctx.getMapGlowHost( mapElement );
         if (!host) {
+            return null;
+        }
+        if (ctx.mapGlowOverlay && (ctx.mapGlowOverlay.contains(host) || ctx.mapGlowOverlay.contains(mapElement))) {
             return null;
         }
         if (!ctx.mapGlowOverlay) {

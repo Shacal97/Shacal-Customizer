@@ -1,4 +1,4 @@
-/* Shacal wolacz 6.3.5 */
+/* Shacal wolacz 6.3.6 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/caller.js", {declare(ctx){ctx.readHeroNotice = function readHeroNotice(element) {
         if (!ctx.isElementVisible(element)) return null;
