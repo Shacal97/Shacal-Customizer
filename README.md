@@ -4,7 +4,7 @@
 
 Shacal Customizer to pakiet personalizacji interfejsu Margonem przygotowany dla świata Solphyr.
 
-**Aktualna wersja: 5.2.6**
+**Aktualna wersja: 5.5.0**
 
 ## Instalacja
 
