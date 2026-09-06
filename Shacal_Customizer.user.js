@@ -4280,15 +4280,25 @@
         return result;
     }
 
+    let e2LastNativeRead=null;
     function readE2Timers() {
         const engine = getShacalGameEngine();
         const key = engine?.windowsData?.name?.addon_17;
         const stored = key ? readSafely(() => engine.serverStorage.get(key)?.data) : null;
         const jq = getShacalGameWindow().jQuery;
-        const raw = Array.isArray(stored) ? stored : [...document.querySelectorAll('.elite-timer-wnd .npc-list .row')]
-            .map(node => readSafely(() => jq?.data(node)?.obj));
+        const rows=[...document.querySelectorAll('.elite-timer-wnd .npc-list .row')];
+        const domData=rows.map(node => readSafely(() => jq?.data(node)?.obj)).filter(Boolean);
+        let raw=Array.isArray(stored)?stored:domData;
         const account = engine?.hero?.d?.account;
         const world = location.hostname.split('.')[0];
+        if(!account)return [];
+        const scope=String(account)+':'+world;
+        if(Array.isArray(stored) || domData.length){
+            e2LastNativeRead={scope,raw,time:performance.now()};
+        }else if(e2LastNativeRead?.scope===scope && performance.now()-e2LastNativeRead.time<15000){
+            // Bridge a short native-storage outage; a real empty array still clears timers.
+            raw=e2LastNativeRead.raw;
+        }
         const found = new Map();
         for (const item of raw) {
             if (!item || Number(item.type) !== 2 || item.user != null) continue;
@@ -4362,12 +4372,10 @@
                 const nodes=[...group.querySelectorAll('.relogger__one-character')];
                 if (world!==location.hostname.split('.')[0] || nodes.length!==models.length) return;
                 // Refuse ambiguous reordered/replaced avatars instead of highlighting the wrong character.
-                const aligned=nodes.every((node,i)=>{
-                    const background=node.querySelector('.img-avatar-correct')?.style.backgroundImage||'';
-                    return typeof models[i].icon==='string' && models[i].icon.length>0 && background.includes(models[i].icon);
-                });
-                if (!aligned) return;
                 nodes.forEach((node,i)=>{
+                    const background=node.querySelector('.img-avatar-correct')?.style.backgroundImage||'';
+                    // An avatar still loading must not disable all other characters.
+                    if(typeof models[i].icon!=='string' || !models[i].icon || !background.includes(models[i].icon))return;
                     const entries=timers.filter(t=>t.charId===String(models[i].id)).sort((a,b)=>Number(b.controlsGlow)-Number(a.controlsGlow)||a.min-b.min);
                     if (!entries.length) return;
                     matched++; e2AvatarTimers.set(node,entries);
@@ -4391,8 +4399,15 @@
         document.addEventListener('pointerover',event=>{const node=event.target.closest?.('.relogger__one-character');if(node && e2AvatarTimers.has(node)){e2Hovered=node;updateE2Tooltip(e2Now());}});
         document.addEventListener('pointerout',event=>{if(e2Hovered?.contains(event.target)&&!e2Hovered.contains(event.relatedTarget))hideE2Tooltip();});
         window.addEventListener('blur',hideE2Tooltip);
-        setInterval(()=>{try{syncE2Relogger();}catch{hideE2Tooltip();}},1000);
-        syncE2Relogger();
+        const refresh=()=>{
+            try{syncE2Relogger();}
+            catch{hideE2Tooltip();const status=document.getElementById('sg-e2-status');if(status)status.textContent='Nie udało się odczytać minutnika. Ponawiam odczyt.';}
+        };
+        setInterval(refresh,1000);
+        window.addEventListener('focus',refresh);
+        window.addEventListener('pageshow',refresh);
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+        refresh();
     }
 
     function refreshE2Characters(panel) {
