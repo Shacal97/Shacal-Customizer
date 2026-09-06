@@ -1,4 +1,4 @@
-/* Shacal przelogowanie 6.3.0 */
+/* Shacal przelogowanie 6.3.3 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/relogger.js", {declare(ctx){ctx.selectFirstE2PerCharacter = function selectFirstE2PerCharacter(timers,scope){
         if(!ctx.firstE2Memory){
@@ -50,6 +50,16 @@ runtime.registerPart("modules/relogger.js", {declare(ctx){ctx.selectFirstE2PerCh
                 // Multiple additions in one scan cannot be reliably ordered either.
                 if(!entry.chosen && fresh.length===1){entry.chosen=signature(fresh[0]);entry.until=fresh[0].max+60;}
                 for(const t of fresh)entry.seen.push({key:signature(t),until:t.max+60});
+            }
+            // Native timer corrections change deadlines, not the selected monster.
+            // Match its saved ID before treating its corrected times as an unrelated timer.
+            if(entry.chosen && !group.some(t=>signature(t)===entry.chosen)){
+                const previousId=entry.chosen.split(':').slice(0,-2).join(':');
+                const candidates=group.filter(t=>String(t.timerId)===previousId);
+                if(candidates.length===1){
+                    const current=candidates[0];
+                    entry.chosen=signature(current);entry.until=current.max+60;
+                }
             }
             state.chars[charId]=entry;
             const chosen=group.find(t=>signature(t)===entry.chosen);

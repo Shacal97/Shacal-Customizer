@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shacal — Panel dodatków
 // @namespace    shacal.margonem
-// @version      6.3.0
+// @version      6.3.3
 // @description  Instalator panelu Shacal i pięciu dodatków pobieranych z repozytorium.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
@@ -23,7 +23,7 @@
     page.__shacalRequest = options => GM_xmlhttpRequest(options);
     const script = document.createElement('script');
             script.charset = 'utf-8';
-    script.src = 'https://shacal97.github.io/Shacal-Customizer/bootstrap.js?v=6.3.0';
+    script.src = 'https://shacal97.github.io/Shacal-Customizer/bootstrap.js?v=6.3.3';
     script.onerror = () => {
         page.__shacalLoading = false;
         const message = document.createElement('div');
