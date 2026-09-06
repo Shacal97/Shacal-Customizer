@@ -1,4 +1,4 @@
-/* Shacal glow 6.3.3 */
+/* Shacal glow 6.3.4 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/glow.js", {declare(ctx){ctx.stopAutomaticLootSounds = function stopAutomaticLootSounds() {
         for(const audio of ctx.activeLootSounds){try{audio.pause();audio.currentTime=0;audio.removeAttribute('src');audio.load();}catch{}}
@@ -347,6 +347,83 @@ ctx.hasGlowForCurrentStyle = function hasGlowForCurrentStyle() {
         }
         return ctx.hasAnyGlowLayer();
     };
+ctx.clearEnergyFrame = function clearEnergyFrame(overlay) {
+    const frame = overlay.querySelector('.shacal-energy-canvas');
+    if (frame) {
+        frame.remove();
+        delete overlay.dataset.shacalAnimationSignature;
+        delete overlay.dataset.shacalInnerAuraSignature;
+        delete overlay.dataset.sgCachedGlow;
+    }
+    ctx.energyFrames.delete(overlay);
+};
+ctx.drawEnergyFrame = function drawEnergyFrame(overlay) {
+    if (document.hidden) return;
+    const now = performance.now();
+    let entry = ctx.energyFrames.get(overlay);
+    if (!entry) {
+        overlay.getAnimations().forEach(animation => animation.cancel());
+        overlay.style.boxShadow = 'none';
+        overlay.style.border = '0';
+        overlay.style.outline = 'none';
+        overlay.style.opacity = '1';
+        overlay.style.transform = 'none';
+        const canvas = document.createElement('canvas');
+        canvas.className = 'shacal-energy-canvas';
+        canvas.setAttribute('aria-hidden', 'true');
+        canvas.style.cssText = 'position:absolute;left:-32px;top:-32px;pointer-events:none;max-width:none;';
+        overlay.appendChild(canvas);
+        entry = {canvas, g:canvas.getContext('2d'), last:0, time:0, signature:''};
+        ctx.energyFrames.set(overlay, entry);
+    }
+    if (!entry.g || now - entry.last < 33) return;
+    const layers = [1,2,3].map(i => ({color:ctx.settings['color'+i], width:ctx.clampLevel(ctx.settings['width'+i]), glow:ctx.clampLevel(ctx.settings['glow'+i]), opacity:ctx.opacityLevel(ctx.settings['opacity'+i])})).filter(l => l.width > 0 && l.glow > 0 && l.opacity > 0);
+    const w = Math.max(0,parseFloat(overlay.style.width)||0), h = Math.max(0,parseFloat(overlay.style.height)||0);
+    const d = Math.min(window.devicePixelRatio || 1, 2), effect = Number(ctx.settings.effect);
+    const moving = effect !== 0 && ctx.clampLevel(ctx.settings.pulse) > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const signature = JSON.stringify([w,h,d,layers,effect,ctx.settings.pulse]);
+    const dt = entry.last ? Math.min((now-entry.last)/1000,.05) : 0;
+    entry.last = now;
+    if (!moving && entry.signature === signature) return;
+    entry.signature = signature;
+    if (moving) entry.time += dt * (.35 + ctx.clampLevel(ctx.settings.pulse)*.22);
+    const canvas = entry.canvas, g = entry.g, pad = 32;
+    const cw = Math.ceil((w+pad*2)*d), ch = Math.ceil((h+pad*2)*d);
+    if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width=cw; canvas.height=ch;
+        canvas.style.width=(w+pad*2)+'px'; canvas.style.height=(h+pad*2)+'px';
+    }
+    g.setTransform(d,0,0,d,0,0); g.clearRect(0,0,w+pad*2,h+pad*2);
+    if (!layers.length || !w || !h) return;
+    const t=entry.time, perimeter=2*(w+h), count=Math.ceil(perimeter/4);
+    const gradient=g.createLinearGradient(pad,pad,pad+w,pad+h);
+    layers.forEach((l,i)=>gradient.addColorStop(layers.length===1?0:i/(layers.length-1),layers[(i+(effect===3?Math.floor(t*.4):0))%layers.length].color));
+    const width=layers.reduce((sum,l)=>sum+l.width,0)/layers.length;
+    const glow=layers.reduce((sum,l)=>sum+l.glow,0)/layers.length*3;
+    const opacity=layers.reduce((sum,l)=>sum+l.opacity,0)/layers.length;
+    const pulse=effect===1 ? .85+.15*Math.sin(t*3) : effect===2 ? .8+.2*Math.sin(t*7)*Math.sin(t*11) : 1;
+    for(let layer=2;layer>=0;layer--) {
+        g.beginPath();
+        for(let i=0;i<=count;i++) {
+            const s=i/count*perimeter; let x,y,nx,ny,a,len;
+            if(s<w){a=s;len=w;x=a;y=0;nx=0;ny=-1;}
+            else if(s<w+h){a=s-w;len=h;x=w;y=a;nx=1;ny=0;}
+            else if(s<2*w+h){a=s-w-h;len=w;x=w-a;y=h;nx=0;ny=1;}
+            else{a=s-2*w-h;len=h;x=0;y=h-a;nx=-1;ny=0;}
+            const fade=Math.max(0,Math.min(1,a/12,(len-a)/12));
+            const noise=(Math.sin(s*.113+t*3.7+layer*2)*1.7+Math.sin(s*.257-t*5.3+layer)*1.1+Math.sin(s*.631+t*7.1)*.55)*fade;
+            const ripple=noise*(layer?1.8:1)+Math.sin(t*2+s*.033)*fade;
+            x+=pad+nx*ripple;y+=pad+ny*ripple;
+            if(i)g.lineTo(x,y);else g.moveTo(x,y);
+        }
+        g.closePath();g.strokeStyle=gradient;g.lineWidth=width*(layer===2?3:layer===1?1.5:.8);
+        g.globalAlpha=opacity*pulse*(layer===2?.16:layer===1?.6:1);
+        g.shadowColor=layers[layer%layers.length].color;g.shadowBlur=glow*(layer===2?1.6:1);g.stroke();
+        if(layer===0){g.shadowBlur=0;g.globalAlpha=opacity*.65*pulse;g.strokeStyle='#d6fff6';g.lineWidth=.6;g.stroke();}
+    }
+    g.globalAlpha=1;g.shadowBlur=0;
+};
+
 ctx.ensureGlowOverlay = function ensureGlowOverlay(windowElement) {
         let overlay = ctx.glowOverlayMap.get(windowElement);
         if (overlay && document.body.contains(overlay)) {
@@ -631,7 +708,7 @@ ctx.positionMapGlowOverlay = function positionMapGlowOverlay( overlay, mapElemen
         const scrollTop = containingBlock
                 ? containingBlock.scrollTop
                 : 0;
-        const requestedInset = style === ctx.STYLE_NEON_80S
+        const requestedInset = style === ctx.STYLE_ENERGY ? 12 : style === ctx.STYLE_NEON_80S
                 ? ctx.SHACAL_MAP_GLOW_INSET
                 : 0;
         const inset = Math.min( requestedInset, Math.max( 0, Math.min( mapRect.width, mapRect.height ) / 4 ) );
@@ -792,7 +869,7 @@ ctx.applyInnerAuraMapAnimation = function applyInnerAuraMapAnimation(overlay) {
     };
 ctx.syncMapGlowOverlay = function syncMapGlowOverlay() {
         const style = Number(ctx.settings.glowStyle) || ctx.STYLE_CLASSIC;
-        if ( ![ ctx.STYLE_NEON_80S, ctx.STYLE_INNER_AURA ].includes(style) || !ctx.addonFeatureEnabled('enabled') || !ctx.hasGlowForCurrentStyle() ) {
+        if ( ![ ctx.STYLE_NEON_80S, ctx.STYLE_INNER_AURA, ctx.STYLE_ENERGY ].includes(style) || !ctx.addonFeatureEnabled('enabled') || !ctx.hasGlowForCurrentStyle() ) {
             ctx.removeMapGlowOverlay();
             return;
         }
@@ -820,6 +897,12 @@ ctx.syncMapGlowOverlay = function syncMapGlowOverlay() {
             delete overlay.dataset.sgCachedGlow;
             overlay.dataset.shacalMapGlowStyle = styleSignature;
         }
+        if (style === ctx.STYLE_ENERGY) {
+            ctx.setMapNeonCoreVisible(overlay, false);
+            ctx.drawEnergyFrame(overlay);
+            return;
+        }
+        ctx.clearEnergyFrame(overlay);
         if (style === ctx.STYLE_INNER_AURA) {
             overlay.style.border = '0 solid transparent';
             ctx.setMapNeonCoreVisible( overlay, false );
@@ -850,6 +933,12 @@ ctx.applyGlowToWindow = function applyGlowToWindow(windowElement) {
         const pulse = ctx.getPulseConfig();
         const effect = Math.max( 0, Math.min(3, Number(ctx.settings.effect) || 0) );
         const currentGlowStyle = Number(ctx.settings.glowStyle) || ctx.STYLE_CLASSIC;
+        if (currentGlowStyle === ctx.STYLE_ENERGY) {
+            ctx.removeItemGlowOverlays(windowElement);
+            ctx.drawEnergyFrame(overlay);
+            return;
+        }
+        ctx.clearEnergyFrame(overlay);
         overlay.classList.add('shacal-glow-neon');
         overlay.classList.remove('shacal-glow-classic');
         overlay.style.outline = 'none';
@@ -992,6 +1081,7 @@ ctx.syncAllGlowOverlays = function syncAllGlowOverlays() {
                 continue;
             }
             ctx.positionGlowOverlay(windowElement, overlay);
+            if (Number(ctx.settings.glowStyle) === ctx.STYLE_ENERGY) ctx.drawEnergyFrame(overlay);
             if ( Number(ctx.settings.glowStyle) === ctx.STYLE_INNER_AURA ) {
                 ctx.removeItemGlowOverlays( windowElement );
             } else {
@@ -1003,6 +1093,7 @@ ctx.syncAllGlowOverlays = function syncAllGlowOverlays() {
             ctx.requestGlowOverlayFrame();
         }
     };},init(ctx){ctx.activeLegendTestAudio = null;
+ctx.energyFrames = new WeakMap();
 ctx.glowOverlayMap = new Map();
 ctx.itemGlowOverlayMap = new Map();
 ctx.mapGlowOverlay = null;

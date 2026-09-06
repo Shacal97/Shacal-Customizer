@@ -1,9 +1,9 @@
-/* Shacal core 6.3.3 */
+/* Shacal core 6.3.4 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.3.3';
+ctx.SHACAL_SCRIPT_VERSION = '6.3.4';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -22,6 +22,7 @@ ctx.DROP_MODE_LEGENDARY = 'legendary';
 ctx.STYLE_CLASSIC = 1;
 ctx.STYLE_NEON_80S = 2;
 ctx.STYLE_INNER_AURA = 3;
+ctx.STYLE_ENERGY = 4;
 ctx.INNER_AURA_MAP_WIDTH_MAX = 15;
 ctx.EFFECT_NONE = 0;
 ctx.EFFECT_PULSE = 1;
@@ -88,7 +89,7 @@ ctx.normalizeSettings = function normalizeSettings(rawSettings) {
         normalized.color3 = ctx.normalizeHexColor( normalized.color3, ctx.defaultSettings.color3 );
         {
             const requestedGlowStyle = Number(normalized.glowStyle);
-            normalized.glowStyle = [ ctx.STYLE_CLASSIC, ctx.STYLE_NEON_80S, ctx.STYLE_INNER_AURA ].includes(requestedGlowStyle)
+            normalized.glowStyle = [ ctx.STYLE_CLASSIC, ctx.STYLE_NEON_80S, ctx.STYLE_INNER_AURA, ctx.STYLE_ENERGY ].includes(requestedGlowStyle)
                     ? requestedGlowStyle
                     : ctx.STYLE_CLASSIC;
         }
@@ -953,6 +954,7 @@ ctx.createPanel = function createPanel() {
                                 <option value="1" ${Number(ctx.panelDraftSettings.glowStyle) === 1 ? 'selected' : ''}>Klasyczna</option>
                                 <option value="2" ${Number(ctx.panelDraftSettings.glowStyle) === 2 ? 'selected' : ''}>Neon 80s</option>
                                 <option value="3" ${Number(ctx.panelDraftSettings.glowStyle) === 3 ? 'selected' : ''}>Inner Aura</option>
+                                <option value="4" ${Number(ctx.panelDraftSettings.glowStyle) === 4 ? 'selected' : ''}>Energia</option>
                             </select>
                         </div>
 
@@ -1984,7 +1986,7 @@ ctx.bindPanel = function bindPanel(panel) {
         }
         glowStyleSelect.addEventListener('change', event => {
             const requestedStyle = Number(event.target.value);
-            ctx.panelDraftSettings.glowStyle = [ ctx.STYLE_CLASSIC, ctx.STYLE_NEON_80S, ctx.STYLE_INNER_AURA ].includes(requestedStyle)
+            ctx.panelDraftSettings.glowStyle = [ ctx.STYLE_CLASSIC, ctx.STYLE_NEON_80S, ctx.STYLE_INNER_AURA, ctx.STYLE_ENERGY ].includes(requestedStyle)
                     ? requestedStyle
                     : ctx.STYLE_CLASSIC;
             updateGlowStyleUiState();
