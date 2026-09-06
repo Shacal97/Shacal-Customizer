@@ -34,11 +34,11 @@ ctx.SHACAL_MAP_GLOW_INSET = 8;}});
 runtime.registerPart("addon-registry.js", {declare(ctx){ctx.addonFeatureEnabled = function addonFeatureEnabled(feature) {
         return ctx.settings['addon_'+ctx.SHACAL_FEATURE_OWNER[feature]]!==false && ctx.settings[feature];
     };},init(ctx){ctx.SHACAL_ADDONS = [
-        {id:'glow',name:'GLOW',description:'Poświata legendarnego łupu, animacje i dźwięki.',features:['enabled','lootSoundEnabled']},
-        {id:'frames',name:'RAMKI I DYMKI',description:'Ramki, poziomy ulepszeń i zsynchronizowane opisy przedmiotów.',features:['itemFramesEnabled','itemTipsEnabled','upgradeBadgeEnabled']},
-        {id:'chat',name:'CZAT',description:'Ogłoszenia legend i emotikony na czacie.',features:['chatAnnouncementsEnabled','chatEmoticonsEnabled']},
-        {id:'detector',name:'WOŁACZ',description:'Wołanie na herosów, kolosy i tytanów.',features:['heroNoticesEnabled']},
-        {id:'e2',name:'PRZELOGOWANIE',description:'Liczniki E2 i podświetlenie postaci.',features:['e2ReloggerEnabled']}
+        {id:'glow',name:'Notyficator',description:'Modyfikacja poświat, dźwięków i animacji przy zdobyczy legendarnego łupu.',features:['enabled','lootSoundEnabled']},
+        {id:'frames',name:'Item Style',description:'Modyfikacja ramek przedmiotów, dodanie ikon ulepszeń przedmiotów, modyfikacja dymków przedmiotów.',features:['itemFramesEnabled','itemTipsEnabled','upgradeBadgeEnabled']},
+        {id:'chat',name:'Custom Chat',description:'Ogłoszenia legend i emotikony na czacie.',features:['chatAnnouncementsEnabled','chatEmoticonsEnabled']},
+        {id:'detector',name:'Wołajka!',description:'Dodatek umożliwiający automatyczne powiadomienie o herosie/tytanie/kolosie na czacie globalnym lub klanowym.',features:['heroNoticesEnabled']},
+        {id:'e2',name:'Relog Timer',description:'Dodatek synchronizujący minutnik z panelem przelogowania z opcją podświetlenia postaci przy respie e2.',features:['e2ReloggerEnabled']}
     ];
 ctx.SHACAL_FEATURE_OWNER = Object.fromEntries(ctx.SHACAL_ADDONS.flatMap(a=>a.features.map(f=>[f,a.id])));}});
 runtime.registerPart("core/settings.js", {declare(ctx){ctx.hasSavedLauncherPosition = function hasSavedLauncherPosition() {
@@ -1702,7 +1702,9 @@ ctx.bindPanel = function bindPanel(panel) {
             panel.querySelector('#sg-tab-e2').classList.toggle('active',tab==='e2');
             panel.querySelector('#sg-tab-e2-content').classList.toggle('active',tab==='e2');
             if(tab==='e2')ctx.refreshE2Characters(panel);
-            const labels = {home:['Twoje dodatki','Wybierz dodatek, ustaw jego opcje i zapisz zmiany.'],e2:['Przelogowanie','Respawn i podświetlenie postaci w oknie przelogowania.'],detector:['Wołacz potworów','Ogłoszenia z wbudowanego wykrywacza gry.'],glow: ['Poświata łupu', 'Kolory, animacja i dźwięk zdobytego łupu.'], frames: ['Ramki i dymki', 'Ramki przedmiotów oraz poziomy ulepszeń.'], tips: ['Ramki i dymki', 'Wygląd opisów i synchronizacja z ramkami.'], chat: ['Czat i ogłoszenia', 'Emotikony, wykrywanie legend i test wiadomości.']};
+            const labels = {home:['Twoje dodatki','Wybierz dodatek, ustaw jego opcje i zapisz zmiany.']};
+            for(const addon of ctx.SHACAL_ADDONS)labels[addon.id]=[addon.name,addon.description];
+            labels.tips=labels.frames;
             panel.querySelector('#sg-page-title').textContent = labels[tab][0];
             panel.querySelector('#sg-page-description').textContent = labels[tab][1];
         };
