@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Margonem - Shacal Customizer
 // @namespace    shacal.margonem
-// @version      5.3.2
+// @version      5.5.0
 // @description  Shacal Customizer - kompletny pakiet personalizacji interfejsu Margonem
 // @match        https://solphyr.margonem.pl/*
 // @exclude      https://forum.margonem.pl/*
@@ -23,7 +23,7 @@
     if ( location.hostname.toLowerCase() !== 'solphyr.margonem.pl' ) {
         return;
     }
-    // Shacal Customizer 5.3.2
+    // Shacal Customizer 5.5.0
     // Spis: 01 Ustawienia | 02 Dźwięk | 03 GLOW | 04 Ramki i dymki
     //       05 Emotki | 06 Przedmioty i czat | 07 Badge/obserwatory
     //       08 Panel | 09 Zasoby (duże Base64) | 10 Start
@@ -33,9 +33,10 @@
     const VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
     const VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
     const STORAGE_KEY = 'shacalLegendaryGlowSettings';
-    const SHACAL_SCRIPT_VERSION = '5.3.2';
+    const SHACAL_SCRIPT_VERSION = '5.5.0';
     const SHACAL_UPDATE_URL = 'https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js';
     const defaultSettings = {
+        noticeHeros: true, noticeKolos: false, noticeTytan: false, heroCallMode: 'auto', heroNoticeChannel: 'GLOBAL', heroNoticesEnabled: false, heroNoticeTemplate: 'Znaleziono: {POTWOR}, {MAPA} ({KOORDY})',
         lootSoundEnabled: true,
         panelTransparency: 0,
         enabled: true, color1: '#63f59a', color2: '#d8b800', color3: '#e12b77', glow1: 3, glow2: 3, glow3: 2, opacity1: 4, opacity2: 4, opacity3: 3, width1: 2, width2: 3,
@@ -87,6 +88,12 @@
         };
         normalized.panelTransparency = Math.round(Math.min(65, Math.max(0, Number(normalized.panelTransparency) || 0)));
         normalized.lootSoundEnabled = normalizeBoolean(normalized.lootSoundEnabled);
+        for(const key of ['noticeHeros','noticeKolos','noticeTytan'])normalized[key]=normalizeBoolean(normalized[key]);
+        normalized.heroCallMode=normalized.heroCallMode==='confirm'?'confirm':'auto';
+        normalized.heroNoticeChannel=normalized.heroNoticeChannel==='CLAN'?'CLAN':'GLOBAL';
+        normalized.heroNoticesEnabled=normalizeBoolean(normalized.heroNoticesEnabled);
+        normalized.heroNoticeTemplate=String(normalized.heroNoticeTemplate ?? defaultSettings.heroNoticeTemplate).slice(0,300);
+        if(normalized.heroNoticeTemplate==='Znaleziono: {POTWOR} — {MAPA} ({KOORDY})')normalized.heroNoticeTemplate=defaultSettings.heroNoticeTemplate;
         normalized.enabled = normalizeBoolean(normalized.enabled);
         normalized.color1 = normalizeHexColor( normalized.color1, defaultSettings.color1 );
         normalized.color2 = normalizeHexColor( normalized.color2, defaultSettings.color2 );
@@ -138,7 +145,7 @@
                     : 0;
         }
         {
-            const validTipFonts = [ 'default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather' ];
+            const validTipFonts = VALID_TIP_FONTS;
             normalized.itemTipFont = validTipFonts.includes(normalized.itemTipFont)
                     ? normalized.itemTipFont
                     : 'default';
@@ -290,7 +297,10 @@
             audio.preload = 'auto';
             const result = audio.play();
             if ( result && typeof result.catch === 'function' ) {
-                result.catch(() => {});
+                result.catch(() => {
+                    activeLootSounds.delete(audio);
+                    if (activeLegendTestAudio === audio) activeLegendTestAudio = null;
+                });
             }
             return audio;
         } catch (_) {
@@ -1278,6 +1288,7 @@
         }
     }
     function buildItemRarityFrameCss() {
+        if (!settings.itemFramesEnabled) return '';
         // Torby mają natywną klasę `.bag`; zostawiamy ich wygląd bez zmian.
         const rarityFrames = [ {
                 enabled: false, rarity: 'common', fallback: 't-norm', color: 'transparent', glow: 'transparent', bright: 'transparent', dark: 'transparent'
@@ -2020,7 +2031,7 @@
     }
     function updateDynamicStyles() {
         style.textContent = [
-            buildTipFontImportCss(), SHACAL_PANEL_CSS, SHACAL_GAME_CSS, SHACAL_COMPACT_CSS, SHACAL_BORDER_CSS, SHACAL_CONTROLS_CSS, SHACAL_DRAG_CSS, SHACAL_HEADER_CSS, SHACAL_CAT_CSS,
+            buildTipFontImportCss(), SHACAL_PANEL_CSS, SHACAL_GAME_CSS, SHACAL_COMPACT_CSS, SHACAL_BORDER_CSS, SHACAL_CONTROLS_CSS, SHACAL_DRAG_CSS, SHACAL_HEADER_CSS, SHACAL_CAT_CSS, SHACAL_QUESTION_CSS,
             buildItemRarityFrameCss(), buildItemTipCss(), buildItemTipFontCss()
         ].join('\n');
     }
@@ -2392,32 +2403,33 @@
 
     async function sendLegendaryGlobalAnnouncement(item, options = {}) {
         const {signal, template = settings.chatMessageTemplate} = options;
+        const targetChannel=options.channel==='CLAN'?'CLAN':'GLOBAL';
         let chat, previousChannel, previousReceiver, previousStyle;
         let changedChannel = false;
         let dispatched = false;
         try {
-            if (signal?.aborted) return {status: 'cancelled'};
+            if (signal?.aborted || (options.scope && options.scope !== getLegendaryChatScope())) return {status: 'cancelled'};
             chat = getShacalGameEngine()?.chatController?.getChatInputWrapper?.();
-            if (!chat || !item?.hid || typeof chat.getDataAndSendRequest !== 'function' ||
+            if (!chat || (!item?.hid && typeof options.message !== 'string') || typeof chat.getDataAndSendRequest !== 'function' ||
                 typeof chat.getChannelName !== 'function' || typeof chat.setChannel !== 'function') {
                 return {status: 'not-ready', retryable: true};
             }
             previousChannel = chat.getChannelName();
             previousReceiver = chat.getPrivateReceiver?.();
             previousStyle = chat.getStyleMessage?.();
-            if (previousChannel !== 'GLOBAL') {
+            if (previousChannel !== targetChannel) {
                 changedChannel = true;
-                chat.setChannel({name: 'GLOBAL'});
-                for (let i = 0; i < 20 && chat.getChannelName() !== 'GLOBAL'; i++) {
+                chat.setChannel({name: targetChannel});
+                for (let i = 0; i < 20 && chat.getChannelName() !== targetChannel; i++) {
                     // Let the pending channel switch settle before restoring it on cancellation.
                     await chatWait(50);
                 }
             }
-            if (signal?.aborted) return {status: 'cancelled'};
-            if (chat.getChannelName() !== 'GLOBAL') return {status: 'not-ready', retryable: true};
+            if (signal?.aborted || (options.scope && options.scope !== getLegendaryChatScope())) return {status: 'cancelled'};
+            if (chat.getChannelName() !== targetChannel) return {status: 'not-ready', retryable: true};
             // No yield between checking channel/cancellation and dispatching the request.
             dispatched = true;
-            const reply = await awaitChatResult(chat.getDataAndSendRequest(buildLegendaryChatMessage(item, template)), signal);
+            const reply = await awaitChatResult(chat.getDataAndSendRequest(typeof options.message === 'string' ? options.message : buildLegendaryChatMessage(item, template)), signal);
             if (reply.uncertain) return {status: 'uncertain'};
             if (reply.value === false || reply.value?.ok === false || reply.value?.success === false) {
                 return {status: 'rejected', retryable: true};
@@ -2428,7 +2440,7 @@
             return dispatched ? {status: 'uncertain'} : {status: 'not-ready', retryable: true};
         } finally {
             // Respect a channel selected by the player while a promise was pending.
-            if (changedChannel && previousChannel && readSafely(() => chat.getChannelName()) === 'GLOBAL') {
+            if (changedChannel && previousChannel && readSafely(() => chat.getChannelName()) === targetChannel) {
                 readSafely(() => chat.setChannel({name: previousChannel}, previousReceiver, previousStyle));
             }
         }
@@ -2460,28 +2472,29 @@
                 let result = {status: 'cancelled'};
                 try {
                     for (let attempt = 1; attempt <= CHAT_RETRY_LIMIT; attempt++) {
-                        if (job.controller.signal.aborted || (!job.manual && (!settings.chatAnnouncementsEnabled || job.generation !== legendaryChatGeneration))) break;
+                        if(job.controller.signal.aborted || (job.kind==='hero' ? (!settings.heroNoticesEnabled||!settings['notice'+job.noticeType]) : (!job.manual && (!settings.chatAnnouncementsEnabled || job.generation!==legendaryChatGeneration))))break;
                         result = await sendLegendaryGlobalAnnouncement(job.item, {
-                            signal: job.controller.signal, template: job.template
+                            signal: job.controller.signal, template: job.template, message: job.message, channel: job.channel, scope: job.scope
                         });
                         if (!result.retryable || attempt === CHAT_RETRY_LIMIT) break;
                         if (!await chatWait(350 * attempt, job.controller.signal)) break;
                     }
-                    if (!job.manual && job.generation === legendaryChatGeneration && ['submitted', 'uncertain'].includes(result.status)) {
+                    if (!job.manual && job.kind !== 'hero' && job.generation === legendaryChatGeneration && ['submitted', 'uncertain'].includes(result.status)) {
                         legendaryChatAnnouncedIds.add(job.key);
                         persistLegendaryChatAnnouncedIds();
                     }
                     const text = result.status === 'submitted'
-                        ? `Przekazano do czatu GLOBAL: ${job.item.name}. Sprawdź wiadomość na czacie.`
+                        ? `Przekazano do czatu ${job.channel === 'CLAN' ? 'klanowego' : 'GLOBAL'}: ${job.item.name}. Sprawdź wiadomość na czacie.`
                         : result.status === 'uncertain'
                             ? 'Brak potwierdzenia wyniku żądania. Sprawdź czat przed kolejnym testem.'
                             : result.status === 'cancelled'
                                 ? 'Ogłoszenie anulowane.'
                                 : 'Czat nie przyjął wiadomości. Spróbuj ponownie, gdy klient gry będzie gotowy.';
-                    if (job.manual || job.generation === legendaryChatGeneration) setLegendaryChatStatus(text);
+                    if(job.kind==='hero')setHeroNoticeStatus(text);
+                    else if (job.manual || job.generation === legendaryChatGeneration) setLegendaryChatStatus(text);
                     job.resolve?.({...result, ok: result.status === 'submitted', message: text});
                 } finally {
-                    if (!job.manual && job.generation === legendaryChatGeneration) legendaryChatQueuedIds.delete(job.key);
+                    if (!job.manual && job.kind !== 'hero' && job.generation === legendaryChatGeneration) legendaryChatQueuedIds.delete(job.key);
                     if (legendaryChatActiveJob === job) legendaryChatActiveJob = null;
                 }
                 if (legendaryChatQueue.length) await chatWait(1700);
@@ -2499,7 +2512,7 @@
         }
         const promise = new Promise(resolve => legendaryChatQueue.push({
             key, item, template: options.template ?? settings.chatMessageTemplate,
-            manual: Boolean(options.manual), generation: legendaryChatGeneration,
+            manual: Boolean(options.manual), generation: legendaryChatGeneration, scope: getLegendaryChatScope(),
             controller: new AbortController(), resolve
         }));
         void processLegendaryChatQueue();
@@ -2518,6 +2531,7 @@
 
     function readLegendaryLootCandidates(now) {
         document.querySelectorAll(LOOT_ITEM_SELECTOR).forEach(element => {
+            if (!isElementVisible(element.closest('.loot-wnd'))) return;
             const item = normalizeChatItem(getItemObjectFromElement(element), element);
             if (!item?.key || !item.legendary) return;
             if (legendaryChatPrimedLoot.get(element) === item.key || legendaryChatAnnouncedIds.has(item.key) || legendaryChatAttemptedIds.has(item.key)) return;
@@ -2559,10 +2573,10 @@
         legendaryChatCandidates.clear();
         legendaryChatAttemptedIds.clear();
         legendaryChatPrimedLoot = new WeakMap();
-        if (legendaryChatActiveJob && !legendaryChatActiveJob.manual) legendaryChatActiveJob.controller.abort();
+        if (legendaryChatActiveJob && legendaryChatActiveJob.kind !== 'hero' && !legendaryChatActiveJob.manual) legendaryChatActiveJob.controller.abort();
         for (let i = legendaryChatQueue.length - 1; i >= 0; i--) {
             const job = legendaryChatQueue[i];
-            if (job.manual) continue;
+            if (job.manual || job.kind==='hero') continue;
             job.controller.abort();
             job.resolve?.({ok: false, status: 'cancelled', message: 'Ogłoszenie anulowane.'});
             legendaryChatQueue.splice(i, 1);
@@ -2592,6 +2606,157 @@
     }
 
 
+
+    // Wołacz korzysta z okien gry dla herosów, kolosów i tytanów.
+    const heroNoticeNodes = new Map();
+    // Pamięć wyłącznie tego załadowania strony: reset następuje po odświeżeniu gry.
+    const announcedNoticesThisPage = new Set();
+    let heroNoticeTimer = null;
+    let heroNoticeScope = '';
+    function readHeroNotice(element) {
+        if (!isElementVisible(element)) return null;
+        const image=element.querySelector('img[data-tip-type="t_npc"]');
+        let path='';try{path=new URL(image?.getAttribute('src')||'',location.href).pathname;}catch{return null;}
+        const type=/\/npc\/her\//i.test(path)?'Heros':/\/npc\/kol\//i.test(path)?'Kolos':/\/npc\/tyt\//i.test(path)?'Tytan':null;
+        if(!type)return null;
+        const name=element.querySelector('.name-label')?.textContent.replace(/\s+/g,' ').trim();
+        const mapNode=element.querySelector('.map-label');
+        const text=mapNode?.textContent.replace(/\s+/g,' ').trim();
+        const match=text?.match(/^(.*?)\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*$/);
+        if(!name||!match||!match[1].trim())return null;
+        return {type,name,map:match[1].trim(),coords:match[2]+','+match[3],key:JSON.stringify([type,name,match[1].trim(),Number(match[2]),Number(match[3])])};
+    }
+    function buildHeroNoticeMessage(notice, template=settings.heroNoticeTemplate) {
+        const values={TYP:notice.type,POTWOR:notice.name,HEROS:notice.name,MAPA:notice.map,KOORDY:notice.coords};
+        return String(template||defaultSettings.heroNoticeTemplate).replace(/\{(TYP|POTWOR|HEROS|MAPA|KOORDY)\}/g,(_,key)=>values[key]).replace(/\s+/g,' ').trim();
+    }
+    function setHeroNoticeStatus(text) {
+        const status=document.getElementById('sg-hero-status');if(status)status.textContent=text;
+    }
+    const heroCallQuestions=[];
+    let activeHeroCallQuestion=null;
+    function closeHeroCallQuestions(){heroCallQuestions.length=0;activeHeroCallQuestion=null;document.getElementById('sg-call-question')?.remove();}
+    function enqueueHeroCall(notice,channel,message){
+        if(!settings.heroNoticesEnabled||!settings['notice'+notice.type])return;
+        legendaryChatQueue.push({kind:'hero',channel,noticeType:notice.type,item:{name:notice.name},message,manual:false,scope:getLegendaryChatScope(),controller:new AbortController()});
+        setHeroNoticeStatus('Wykryto: '+notice.name+'. Ogłoszenie w kolejce.');
+        void processLegendaryChatQueue();
+    }
+    function showNextHeroCallQuestion(){
+        if(activeHeroCallQuestion||!heroCallQuestions.length)return;
+        if(!settings.heroNoticesEnabled||settings.heroCallMode!=='confirm'){closeHeroCallQuestions();return;}
+        const question=heroCallQuestions.shift();activeHeroCallQuestion=question;
+        const box=document.createElement('div');box.id='sg-call-question';box.setAttribute('role','dialog');box.setAttribute('aria-labelledby','sg-call-question-title');
+        box.innerHTML='<h3 id="sg-call-question-title">Zawołać na czat?</h3><div class="sg-call-target"></div><p class="sg-call-message"></p><div class="sg-call-buttons"><button type="button" id="sg-call-yes">TAK</button><button type="button" id="sg-call-no">NIE</button></div>';
+        box.querySelector('.sg-call-target').textContent=question.notice.name+' · '+(question.channel==='CLAN'?'Czat klanowy /k':'Czat globalny /o');
+        box.querySelector('.sg-call-message').textContent=question.message;
+        const answer=yes=>{
+            if(activeHeroCallQuestion!==question)return;
+            activeHeroCallQuestion=null;box.remove();
+            if(yes&&question.scope===getLegendaryChatScope()&&settings.heroCallMode==='confirm')enqueueHeroCall(question.notice,question.channel,question.message);
+            else setHeroNoticeStatus('Pominięto wołanie: '+question.notice.name+'.');
+            showNextHeroCallQuestion();
+        };
+        box.querySelector('#sg-call-yes').addEventListener('click',()=>answer(true));
+        box.querySelector('#sg-call-no').addEventListener('click',()=>answer(false));
+        box.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();answer(false);}});
+        document.body.append(box);
+        box.style.opacity=document.getElementById('shacal-glow-panel')?.style.opacity||String(1-settings.panelTransparency/100);
+        makeCallQuestionDraggable(box);
+    }
+    function pruneHeroCallQuestions(){
+        if(legendaryChatActiveJob?.kind==='hero'&&!settings['notice'+legendaryChatActiveJob.noticeType])legendaryChatActiveJob.controller.abort();
+        for(let i=heroCallQuestions.length-1;i>=0;i--){
+            if(!settings['notice'+heroCallQuestions[i].notice.type])heroCallQuestions.splice(i,1);
+        }
+        if(activeHeroCallQuestion&&!settings['notice'+activeHeroCallQuestion.notice.type]){
+            activeHeroCallQuestion=null;
+            document.getElementById('sg-call-question')?.remove();
+        }
+        showNextHeroCallQuestion();
+    }
+    function makeCallQuestionDraggable(box){
+        let saved=null,drag=null;
+        try{saved=JSON.parse(localStorage.getItem('shacalCallPosition'));}catch{}
+        const initial=box.getBoundingClientRect();
+        box.style.transform='none';
+        keepPanelReachable(box,Number.isFinite(saved?.left)?saved.left:initial.left,Number.isFinite(saved?.top)?saved.top:initial.top);
+        box.addEventListener('pointerdown',event=>{
+            if(event.button!==0||event.target.closest('button'))return;
+            const rect=box.getBoundingClientRect();
+            drag={id:event.pointerId,dx:event.clientX-rect.left,dy:event.clientY-rect.top};
+            box.setPointerCapture(event.pointerId);event.preventDefault();
+        });
+        box.addEventListener('pointermove',event=>{
+            if(!drag||drag.id!==event.pointerId)return;
+            keepPanelReachable(box,event.clientX-drag.dx,event.clientY-drag.dy);
+        });
+        const finish=event=>{
+            if(!drag||event.pointerId!==drag.id)return;
+            const id=drag.id;drag=null;
+            if(box.hasPointerCapture(id))box.releasePointerCapture(id);
+            const rect=box.getBoundingClientRect();
+            try{localStorage.setItem('shacalCallPosition',JSON.stringify({left:rect.left,top:rect.top}));}catch{}
+        };
+        box.addEventListener('pointerup',finish);
+        box.addEventListener('pointercancel',finish);
+        box.addEventListener('lostpointercapture',finish);
+    }
+    window.addEventListener('resize',()=>{
+        const box=document.getElementById('sg-call-question');if(!box)return;
+        const rect=box.getBoundingClientRect();keepPanelReachable(box,rect.left,rect.top);
+    });
+    function requestHeroCall(notice){
+        const channel=settings.heroNoticeChannel,message=buildHeroNoticeMessage(notice);
+        if(settings.heroCallMode==='confirm'){
+            heroCallQuestions.push({notice,channel,message,scope:getLegendaryChatScope()});
+            setHeroNoticeStatus('Oczekiwanie na decyzję: '+notice.name+'.');showNextHeroCallQuestion();
+        }else enqueueHeroCall(notice,channel,message);
+    }
+
+    function cancelHeroNoticeJobs() {
+        closeHeroCallQuestions();
+        if(legendaryChatActiveJob?.kind==='hero')legendaryChatActiveJob.controller.abort();
+        for(let i=legendaryChatQueue.length-1;i>=0;i--){const job=legendaryChatQueue[i];if(job.kind!=='hero')continue;job.controller.abort();job.resolve?.({status:'cancelled'});legendaryChatQueue.splice(i,1);}
+    }
+    function scanHeroNotices() {
+        if(!settings.heroNoticesEnabled)return;
+        const scope=getLegendaryChatScope();
+        if(scope!==heroNoticeScope){cancelHeroNoticeJobs();heroNoticeScope=scope;heroNoticeNodes.clear();}
+        for(const node of heroNoticeNodes.keys())if(!isElementVisible(node))heroNoticeNodes.delete(node);
+        document.querySelectorAll('.heros-detector').forEach(element=>{
+            const notice=readHeroNotice(element);if(!notice||!settings['notice'+notice.type])return;
+            const pageKey=JSON.stringify([scope,notice.key]);
+            if(announcedNoticesThisPage.has(pageKey))return;
+            if(heroNoticeNodes.get(element)===notice.key)return;
+            heroNoticeNodes.set(element,notice.key);
+            announcedNoticesThisPage.add(pageKey);
+            requestHeroCall(notice);
+        });
+    }
+    function scheduleHeroNoticeScan() {
+        if(heroNoticeTimer!==null)return;
+        heroNoticeTimer=setTimeout(()=>{heroNoticeTimer=null;scanHeroNotices();},150);
+    }
+    function startHeroNoticeObserver() {
+        const observer=new MutationObserver(records=>{
+            // Usunięte i ponownie dodane okno jest nowym wyświetleniem, także w tej samej klatce.
+            for(const record of records)for(const removed of record.removedNodes){
+                if(removed.nodeType!==1)continue;
+                if(removed.matches('.heros-detector'))heroNoticeNodes.delete(removed);
+                removed.querySelectorAll('.heros-detector').forEach(node=>heroNoticeNodes.delete(node));
+            }
+            if(!settings.heroNoticesEnabled)return;
+            const relevant=records.some(record=>{
+                const node=record.target.nodeType===1?record.target:record.target.parentElement;
+                return node?.closest?.('.heros-detector')||[...record.addedNodes].some(added=>added.nodeType===1&&(added.matches('.heros-detector')||added.querySelector('.heros-detector')));
+            });
+            if(relevant)scheduleHeroNoticeScan();
+        });
+        observer.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['src','style','class','data-tip-type']});
+        setInterval(()=>{if(settings.heroNoticesEnabled)scheduleHeroNoticeScan();},1000);
+        scheduleHeroNoticeScan();
+    }
 
     // 07. OZNACZENIA ULEPSZEŃ I OBSERWATORY
     const upgradeBadgeOverlayMap = new Map();
@@ -3321,6 +3486,8 @@
         updateSaveButtonState(panel);
     }
     function commitPanelDraftSettings(panel) {
+        const previousHeroMode=settings.heroCallMode;
+        const wasHeroEnabled=settings.heroNoticesEnabled;
         const wasChatEnabled = settings.chatAnnouncementsEnabled;
         const position = {iconX: settings.iconX, iconY: settings.iconY};
         settings = normalizeSettings({...panelDraftSettings, ...position});
@@ -3329,6 +3496,11 @@
             else resetLegendaryChatTracker();
         }
         if(!settings.lootSoundEnabled)stopAutomaticLootSounds();
+        if(previousHeroMode!==settings.heroCallMode)cancelHeroNoticeJobs();
+        pruneHeroCallQuestions();
+        if(!settings.heroNoticesEnabled){cancelHeroNoticeJobs();heroNoticeNodes.clear();}
+        else if(!wasHeroEnabled)scheduleHeroNoticeScan();
+        setHeroNoticeStatus(settings.heroNoticesEnabled ? (settings.noticeHeros||settings.noticeKolos||settings.noticeTytan ? 'Wołacz jest włączony. Czeka na powiadomienie z gry.' : 'Wybierz przynajmniej jeden rodzaj potwora i zapisz.') : 'Wołacz jest wyłączony.');
         const saved = saveSettings();
         panelDraftSettings = {...settings};
         panelDraftDirty = !saved;
@@ -3382,7 +3554,7 @@
                 <button id="sg-tab-glow" class="panel-tab active" type="button">GLOW</button>
                 <button id="sg-tab-frames" class="panel-tab" type="button">RAMKI</button>
                 <button id="sg-tab-tips" class="panel-tab" type="button">DYMKI</button>
-                <button id="sg-tab-chat" class="panel-tab" type="button">CZAT</button>
+                <button id="sg-tab-chat" class="panel-tab" type="button">CZAT</button><button id="sg-tab-detector" class="panel-tab" type="button">WOŁACZ</button>
             </div>
 
             <div id="sg-tab-glow-content" class="body tab-content active">
@@ -4040,6 +4212,22 @@
                 </div>
 
             </div>
+            <div id="sg-tab-detector-content" class="body tab-content">                <div class="panel-section">
+                    <div class="section-title">Tryb wołania</div>
+                    <label class="master-row"><span class="master-copy"><span class="master-label">Włącz wołacz potworów</span><span class="hint">Korzysta z powiadomień wbudowanego wykrywacza gry. Wybierz kanał i rodzaje potworów.</span></span><input id="sg-hero-enabled" type="checkbox" ${panelDraftSettings.heroNoticesEnabled?'checked':''}></label>
+                    <div class="sg-call-mode" role="group" aria-label="Tryb wołania">
+<label><input type="radio" name="sg-call-mode" value="auto" ${panelDraftSettings.heroCallMode==='auto'?'checked':''}><span>Automatyczne Wołanie<small>Wysyła wiadomość bez pytania.</small></span></label>
+<label><input type="radio" name="sg-call-mode" value="confirm" ${panelDraftSettings.heroCallMode==='confirm'?'checked':''}><span>Okno Wołania<small>Pyta o zgodę przed wysłaniem.</small></span></label>
+</div><label class="control-label" for="sg-hero-channel" style="margin-top:16px">Kanał ogłoszeń</label><select id="sg-hero-channel"><option value="GLOBAL" ${panelDraftSettings.heroNoticeChannel==='GLOBAL'?'selected':''}>Globalny /o</option><option value="CLAN" ${panelDraftSettings.heroNoticeChannel==='CLAN'?'selected':''}>Klanowy /k</option></select><div class="rarity-list" style="margin-top:16px">
+<label class="master-row"><span>Herosi</span><input type="checkbox" id="sg-notice-Heros" ${panelDraftSettings.noticeHeros?'checked':''}></label>
+<label class="master-row"><span>Kolosy</span><input type="checkbox" id="sg-notice-Kolos" ${panelDraftSettings.noticeKolos?'checked':''}></label>
+<label class="master-row"><span>Tytani</span><input type="checkbox" id="sg-notice-Tytan" ${panelDraftSettings.noticeTytan?'checked':''}></label>
+</div><label class="control-label" for="sg-hero-template" style="margin-top:14px">Treść ogłoszenia</label>
+                    <textarea id="sg-hero-template" class="chat-template" maxlength="300">${escapeHtml(panelDraftSettings.heroNoticeTemplate)}</textarea>
+                    <div class="frames-note">Wstaw {POTWOR}, aby dodać nazwę potwora, {TYP}, aby podać jego rodzaj, {MAPA}, aby dodać nazwę mapy, a {KOORDY}, aby podać współrzędne. O to samo znalezisko pytamy lub wołamy tylko raz do odświeżenia gry, także po wybraniu NIE.</div>
+                    <div id="sg-hero-status" class="frames-note" role="status">Włącz opcję i zapisz ustawienia.</div>
+                </div>
+</div>
             <div class="sg-save-footer">
                 <button
                     id="sg-save-settings"
@@ -4086,7 +4274,7 @@
         const icons = ['<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>','<rect x="4" y="4" width="16" height="16"/><path d="M8 8h8v8H8z"/>','<path d="M4 5h16v12H9l-5 4Z"/><path d="M8 9h8m-8 4h5"/>','<path d="M3 4h18v13H9l-6 4Z"/><path d="M7 9h10m-10 4h6"/>'];
         tabs.querySelectorAll('button').forEach((button,i)=>{
             const icon=document.createElement('span');icon.className='sg-nav-icon';icon.setAttribute('aria-hidden','true');
-            icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+icons[i]+'</svg>';
+            icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+(icons[i]||'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/>')+'</svg>';
             button.prepend(icon);
         });
         main.append(tabs);
@@ -4105,7 +4293,7 @@
         panel.querySelectorAll('input[type=range]').forEach(paintRange);
         panel.addEventListener('input',event=>{if(event.target.matches('input[type=range]'))paintRange(event.target);});
         const slider=transparency.querySelector('input');slider.value=String(panelDraftSettings.panelTransparency);
-        const refresh=()=>{const value=Number(slider.value);panel.style.opacity=String(1-value/100);transparency.querySelector('output').textContent=value+'%';};
+        const refresh=()=>{const value=Number(slider.value);panel.style.opacity=String(1-value/100);const question=document.getElementById('sg-call-question');if(question)question.style.opacity=panel.style.opacity;transparency.querySelector('output').textContent=value+'%';};
         slider.addEventListener('input',()=>{panelDraftSettings.panelTransparency=Number(slider.value);markPanelDraftDirty(panel);refresh();});
         refresh();
         paintRange(slider);
@@ -4162,7 +4350,9 @@
             framesContent.classList.toggle('active', framesActive);
             tipsContent.classList.toggle('active', tipsActive);
             chatContent.classList.toggle('active', chatActive);
-            const labels = {glow: ['Poświata łupu', 'Kolory, animacja i dźwięk zdobytego łupu.'], frames: ['Ramki przedmiotów', 'Rangi, własne zestawy i poziomy ulepszeń.'], tips: ['Dymki przedmiotów', 'Spójne obwódki, kolory oraz typografia.'], chat: ['Czat i ogłoszenia', 'Emotikony, wykrywanie legend i test wiadomości.']};
+            panel.querySelector('#sg-tab-detector').classList.toggle('active',tab==='detector');
+            panel.querySelector('#sg-tab-detector-content').classList.toggle('active',tab==='detector');
+            const labels = {detector:['Wołacz potworów','Ogłoszenia z wbudowanego wykrywacza gry.'],glow: ['Poświata łupu', 'Kolory, animacja i dźwięk zdobytego łupu.'], frames: ['Ramki przedmiotów', 'Rangi, własne zestawy i poziomy ulepszeń.'], tips: ['Dymki przedmiotów', 'Spójne obwódki, kolory oraz typografia.'], chat: ['Czat i ogłoszenia', 'Emotikony, wykrywanie legend i test wiadomości.']};
             panel.querySelector('#sg-page-title').textContent = labels[tab][0];
             panel.querySelector('#sg-page-description').textContent = labels[tab][1];
         };
@@ -4170,6 +4360,8 @@
         framesTab.addEventListener('click', () => setPanelTab('frames'));
         tipsTab.addEventListener('click', () => setPanelTab('tips'));
         chatTab.addEventListener('click', () => setPanelTab('chat'));
+        panel.querySelector('#sg-tab-detector').addEventListener('click',()=>setPanelTab('detector'));
+        for(const type of ['Heros','Kolos','Tytan'])panel.querySelector('#sg-notice-'+type).addEventListener('change',event=>{panelDraftSettings['notice'+type]=event.target.checked;markPanelDraftDirty(panel);});
         const bindFrameToggle = (selector, property) => {
             panel.querySelector(selector).addEventListener('change', event => {
                 panelDraftSettings[property] = event.target.checked;
@@ -4214,6 +4406,11 @@
         const chatTemplateInput = panel.querySelector('#sg-chat-message-template');
         const chatPreview = panel.querySelector('#sg-chat-preview');
         const chatTestButton = panel.querySelector('#sg-chat-test');
+        panel.querySelectorAll('input[name="sg-call-mode"]').forEach(input=>input.addEventListener('change',()=>{if(input.checked){panelDraftSettings.heroCallMode=input.value;markPanelDraftDirty(panel);}}));
+        panel.querySelector('#sg-hero-channel').addEventListener('change',event=>{panelDraftSettings.heroNoticeChannel=event.target.value==='CLAN'?'CLAN':'GLOBAL';markPanelDraftDirty(panel);});
+        panel.querySelector('#sg-hero-enabled').addEventListener('change',event=>{panelDraftSettings.heroNoticesEnabled=event.target.checked;markPanelDraftDirty(panel);});
+        panel.querySelector('#sg-hero-template').addEventListener('input',event=>{panelDraftSettings.heroNoticeTemplate=event.target.value;markPanelDraftDirty(panel);});
+        if(settings.heroNoticesEnabled)setHeroNoticeStatus('Wołacz jest włączony. Czeka na powiadomienie z gry.');
         const chatTestStatus = panel.querySelector('#sg-chat-test-status');
         const refreshChatPreview = () => {
             const raw = String(chatTemplateInput.value || '') .replace(/\u00a0/g, ' ');
@@ -4937,7 +5134,7 @@
     #shacal-glow-panel .sg-workspace { display: flex; flex-direction: column; }
     #shacal-glow-panel .sg-side { display: block; padding: 6px; border-right: 0; border-bottom: 1px solid #111; }
     #shacal-glow-panel .sg-side-label, #shacal-glow-panel .sg-side-info, #shacal-glow-panel .sg-nav-icon { display: none; }
-    #shacal-glow-panel .panel-tabs { grid-template-columns: repeat(4,1fr); gap: 3px; }
+    #shacal-glow-panel .panel-tabs { grid-template-columns: repeat(5,1fr); gap: 3px; }
     #shacal-glow-panel .panel-tab { height: 34px; padding: 0 3px; justify-content: center; font-size: 9px; }
     #shacal-glow-panel .sg-main { flex: 1; }
     #shacal-glow-panel .body { padding: 14px; }
@@ -4954,7 +5151,7 @@
     #shacal-glow-panel .sg-save-settings { flex-basis: 125px; }
 }
 
-/* ACTION STUDIO — podgląd po lewej, kompaktowa konsola po prawej. */
+/* Panel ustawień. */
 #shacal-glow-panel { width:1100px; height:min(740px,calc(100vh - 24px)); border-radius:5px; border-color:#51545a; background:#202124; box-shadow:0 26px 95px #000b,0 0 0 1px #07080b; }
 #shacal-glow-panel .header { height:58px; padding:7px 48px 7px 20px; background:#242528; border-bottom:2px solid #101114; }
 #shacal-glow-panel .brand-title {font:900 25px/1 'Segoe UI',sans-serif; letter-spacing:-1px; text-transform:uppercase; text-shadow:none; color:#f1f4f6;}
@@ -4962,9 +5159,9 @@
 #shacal-glow-panel .brand-mark {width:37px;height:37px;flex-basis:37px;}
 #shacal-glow-panel .brand-update-row {right:58px;}
 #shacal-glow-panel .close-button {top:0;right:0;width:37px;height:26px;border-radius:0;color:#55efda;background:#17181a;}
-#shacal-glow-panel .sg-action-workspace {height:calc(100% - 140px);display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:0;}
+
 #shacal-glow-panel .sg-main {min-height:0;min-width:0;display:flex;flex-direction:column;border-left:2px solid #101114;background:#222326;}
-#shacal-glow-panel .panel-tabs {display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #111;flex-shrink:0;}
+#shacal-glow-panel .panel-tabs {display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-bottom:1px solid #111;flex-shrink:0;}
 #shacal-glow-panel .panel-tab {height:55px;border:0;border-right:1px solid #151618;border-radius:0;background:#242528;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;font-size:8px;padding:4px;color:#a4a8af;box-shadow:none;}
 #shacal-glow-panel .panel-tab.active {color:#031612;background:#39dfc6;box-shadow:inset 0 -3px #bfffee;}
 #shacal-glow-panel .sg-nav-icon {display:block;width:23px;height:23px;}
@@ -4983,55 +5180,55 @@
 #shacal-glow-panel .drop-mode-option:has(input:checked) {background:#23423d;border-color:#43bda9;}
 #shacal-glow-panel .control-grid {gap:10px;}
 #shacal-glow-panel .sound-row {grid-template-columns:1fr 90px;}
-#shacal-glow-panel .sg-studio {display:flex;flex-direction:column;min-width:0;min-height:0;background:#14161c;}
-#shacal-glow-panel .sg-monitor-bar {height:39px;flex-shrink:0;padding:0 20px;display:flex;justify-content:space-between;align-items:center;background:#242528;border-bottom:1px solid #080b0f;font-size:10px;color:#a4aab2;}
-#shacal-glow-panel .sg-monitor-active {height:100%;display:flex;align-items:center;border-bottom:2px solid #4cdecf;color:#e5e9ee;}
-#shacal-glow-panel .sg-live-indicator {font-size:8px;letter-spacing:1.5px;border:1px solid #51575f;padding:2px 6px;}
-#shacal-glow-panel .sg-monitor {--sg-preview-c1:#63f59a;--sg-preview-c2:#d8b800;--sg-preview-c3:#945ee8;position:relative;isolation:isolate;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:70px 30px 55px;background:radial-gradient(ellipse at 12% 70%,#073d43 0,transparent 58%),radial-gradient(ellipse at 85% 20%,#30205b 0,transparent 65%),#070e1b;}
-#shacal-glow-panel .sg-studio-grid {position:absolute;inset:0;z-index:-2;background-image:linear-gradient(#97a4f408 1px,transparent 1px),linear-gradient(90deg,#97a4f408 1px,transparent 1px);background-size:36px 36px;mask-image:linear-gradient(transparent,#000);}
-#shacal-glow-panel .sg-studio-wordmark {position:absolute;top:26px;left:26px;color:#f3f5fa;font-size:30px;line-height:1;font-weight:900;letter-spacing:4px;}
-#shacal-glow-panel .sg-studio-wordmark span {display:block;font-size:7px;font-weight:500;letter-spacing:2px;color:#87a5b9;margin-top:9px;}
-#shacal-glow-panel .sg-aura-art {position:absolute;inset:-10%;z-index:-1;transform:rotate(-25deg);opacity:.8;pointer-events:none;}
-#shacal-glow-panel .sg-aura-art i {position:absolute;left:18%;top:17%;width:65%;height:68%;border-radius:48% 52% 37% 63%;border:28px solid #4f27af;box-shadow:inset 8px 8px 23px #8366fc99,14px 8px 45px #160438;transform:rotate(25deg);}
-#shacal-glow-panel .sg-aura-art i:nth-child(2) {left:10%;top:25%;width:64%;height:58%;border-width:20px;border-color:#08727b;box-shadow:inset 6px 6px 12px #50e9cc66,12px 7px 28px #041c24;transform:rotate(65deg);}
-#shacal-glow-panel .sg-aura-art i:nth-child(3) {left:39%;top:25%;width:42%;height:60%;border-width:17px;border-color:#7140db;transform:rotate(-15deg);}
-#shacal-glow-panel .sg-aura-art i:nth-child(4) {left:25%;top:33%;width:48%;height:42%;border-width:14px;border-color:#0aa5a5;transform:rotate(35deg);box-shadow:inset 3px 4px 9px #90ffee88,8px 5px 35px #03272b;}
-#shacal-glow-panel .sg-loot-preview {width:100%;max-width:430px;border:1px solid #50626d;background:#11171feF;backdrop-filter:blur(12px);border-radius:4px;transform:perspective(1000px) rotateY(-4deg);overflow:hidden;}
-#shacal-glow-panel .sg-loot-preview-head {height:36px;background:#1c252f;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:10px;font-weight:700;letter-spacing:2px;border-bottom:1px solid #3b4654;}
-#shacal-glow-panel .sg-preview-label {font-size:7px;font-weight:400;letter-spacing:1px;color:#8ba1b7;}
-#shacal-glow-panel .sg-demo-item {display:flex;align-items:center;gap:16px;padding:24px 18px;}
-#shacal-glow-panel .sg-demo-icon {position:relative;width:65px;height:65px;flex-shrink:0;background:radial-gradient(#4a2961,#14101d);border:1px solid #c780eb;box-shadow:inset 0 0 16px #a146e74d,0 0 15px #aa5aff26;}
-#shacal-glow-panel .sg-demo-icon svg {width:100%;height:100%;padding:9px;}
-#shacal-glow-panel .sg-demo-icon b {position:absolute;right:2px;bottom:0;font-size:10px;color:#ffe68b;}
-#shacal-glow-panel .sg-demo-item small {display:block;font-size:7px;letter-spacing:1.5px;color:#c684f3;margin-bottom:7px;}
-#shacal-glow-panel .sg-demo-item strong {display:block;color:#e3b6ff;font-size:17px;line-height:1.25;letter-spacing:-.4px;}
-#shacal-glow-panel .sg-demo-item p {font-size:9px;color:#8898ab;margin:7px 0 0;}
-#shacal-glow-panel .sg-demo-stats {display:flex;justify-content:space-between;margin:0 18px 16px;border-top:1px solid #33404d;padding-top:13px;}
-#shacal-glow-panel .sg-demo-stats>span {color:#7c8b9e;font-size:7px;letter-spacing:1px;}
-#shacal-glow-panel .sg-demo-stats strong {display:block;margin-top:6px;font-size:9px;color:#d9e4ed;letter-spacing:.4px;}
-#shacal-glow-panel .sg-demo-colors {display:flex!important;gap:5px;}
-#shacal-glow-panel .sg-demo-colors i {display:block;width:10px;height:10px;background:var(--sg-preview-c1);border-radius:2px;box-shadow:0 0 6px var(--sg-preview-c1);}
-#shacal-glow-panel .sg-demo-colors i:nth-child(2) {background:var(--sg-preview-c2);box-shadow:0 0 6px var(--sg-preview-c2);}
-#shacal-glow-panel .sg-demo-colors i:nth-child(3) {background:var(--sg-preview-c3);box-shadow:0 0 6px var(--sg-preview-c3);}
-#shacal-glow-panel .sg-demo-message {background:#080e15b0;padding:12px 16px;display:flex;gap:9px;border-top:1px solid #293746;align-items:baseline;}
-#shacal-glow-panel .sg-demo-message>span {color:#6bd8c7;font-size:7px;letter-spacing:1px;}
-#shacal-glow-panel .sg-demo-message p {font-size:10px;line-height:1.5;color:#b6c6d8;margin:0;overflow-wrap:anywhere;min-width:0;}
-#shacal-glow-panel .sg-monitor-caption {position:absolute;bottom:20px;left:26px;right:15px;display:flex;align-items:center;gap:8px;color:#859daf;font-size:9px;}
-#shacal-glow-panel .sg-preview-dot {width:5px;height:5px;background:#51dbc5;border-radius:50%;box-shadow:0 0 12px #00f3c9;}
-#shacal-glow-panel .sg-studio-help {height:65px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:12px 21px;background:#242528;border-top:1px solid #080b0f;}
-#shacal-glow-panel .sg-help-icon {width:15px;height:15px;display:grid;place-items:center;background:#60656c;color:#202329;border-radius:50%;font:700 10px Georgia;}
-#shacal-glow-panel .sg-studio-help p {color:#929aa5;font-size:10px;line-height:1.65;margin:0;}
-#shacal-glow-panel .sg-studio-help strong {font-weight:400;color:#c1c8d1;}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #shacal-glow-panel .sg-save-footer {height:82px;padding:7px 30px 7px 22px;background:#191a1d;border-top:2px solid #101114;}
 #shacal-glow-panel .sg-save-settings {height:62px;flex:0 0 62px;border-radius:50%;background:#181d22;color:#8ffbe5;border:2px solid #38e4c3;font-size:8px;letter-spacing:.1px;box-shadow:0 0 15px #21ecc420;}
 #shacal-glow-panel .sg-save-settings.sg-save-pending {background:#251c34;border-color:#ae78f3;color:#ecdaff;box-shadow:0 0 18px #8950e53a;}
 #shacal-glow-panel .sg-save-hint {font-size:10px;}
-@media(max-width:1130px){#shacal-glow-panel{width:calc(100vw - 24px);}#shacal-glow-panel .sg-action-workspace{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);}#shacal-glow-panel .sg-monitor{padding-left:22px;padding-right:22px;}#shacal-glow-panel .sg-demo-item{gap:12px;padding:20px 14px;}#shacal-glow-panel .sg-demo-item strong{font-size:15px;}}
-@media(max-width:760px){#shacal-glow-panel .sg-action-workspace{display:flex;flex-direction:column;}#shacal-glow-panel .sg-studio{display:none;}#shacal-glow-panel .sg-main{flex:1;border-left:0;}#shacal-glow-panel .panel-tabs{display:grid;}#shacal-glow-panel .panel-tab{height:43px;flex-direction:row;gap:7px;}#shacal-glow-panel .sg-nav-icon{width:17px;height:17px;}#shacal-glow-panel .header{padding-left:12px;}#shacal-glow-panel .brand-title{font-size:19px;}#shacal-glow-panel .brand-subtitle{display:none;}#shacal-glow-panel .sg-save-footer{padding:8px 16px;}#shacal-glow-panel .sound-row{grid-template-columns:1fr 90px;}}
+@media(max-width:1130px){#shacal-glow-panel{width:calc(100vw - 24px);}}
+@media(max-width:760px){#shacal-glow-panel .sg-main{flex:1;border-left:0;}#shacal-glow-panel .panel-tabs{display:grid;}#shacal-glow-panel .panel-tab{height:43px;flex-direction:row;gap:7px;}#shacal-glow-panel .sg-nav-icon{width:17px;height:17px;}#shacal-glow-panel .header{padding-left:12px;}#shacal-glow-panel .brand-title{font-size:19px;}#shacal-glow-panel .brand-subtitle{display:none;}#shacal-glow-panel .sg-save-footer{padding:8px 16px;}#shacal-glow-panel .sound-row{grid-template-columns:1fr 90px;}}
 @media(prefers-reduced-motion:reduce){#shacal-glow-panel *{transition:none!important;}}
-#shacal-glow-panel #sg-chat-copy-diagnostic {padding:9px 12px;margin:12px 8px 0 0;border:1px solid #59616d;background:#242a34;color:#b6c4d6;font:600 9px 'Segoe UI',sans-serif;border-radius:3px;cursor:pointer;}
-#shacal-glow-panel .sg-loot-preview {max-height:100%;}
-#shacal-glow-panel .sg-demo-message {max-height:78px;overflow:auto;}
+
+
+
 `;
     const SHACAL_COMPACT_CSS = `#shacal-glow-panel {width:760px;background:#030406;border-color:#34454a;box-shadow:0 24px 80px #000d,0 0 24px #00ebca15;}
 #shacal-glow-panel .header {background:#07090c;border-bottom:1px solid #00e7c540;}
@@ -5178,6 +5375,19 @@
 #shacal-glow-panel .sg-sound-preview button {padding:8px 12px;color:#b7ffef;background-color:#12352f;border:1px solid #459d8f;font-size:9px;cursor:pointer;}
 #shacal-glow-panel .sg-sound-preview .hint {flex-basis:100%;font-size:10px;color:#9cabbc;}
 @media(max-width:600px){#shacal-glow-panel .sound-row{grid-template-columns:1fr;} }
+`;
+    const SHACAL_QUESTION_CSS = `
+#shacal-glow-panel .sg-call-mode{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;}
+#shacal-glow-panel .sg-call-mode label{display:flex;align-items:center;gap:10px;padding:12px;background:#0a1118;border:1px solid #34424e;border-radius:5px;cursor:pointer;}
+#shacal-glow-panel .sg-call-mode label:has(input:checked){border-color:#00dfc3;background:#09241f;box-shadow:inset 0 1px #65ffe322;}
+#shacal-glow-panel .sg-call-mode input{accent-color:#00e8c8;}
+#shacal-glow-panel .sg-call-mode span{font-size:11px;color:#d9f9ef;}#shacal-glow-panel .sg-call-mode small{display:block;color:#92a4b5;font-size:9px;margin-top:4px;}
+#sg-call-question{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2000100;width:min(222px,calc(100vw - 28px));max-height:calc(100vh - 28px);overflow:auto;box-sizing:border-box;padding:12px;touch-action:none;cursor:move;border:2px solid #52dfd0;border-radius:9px;background:linear-gradient(145deg,#0d1d21,#110a20);box-shadow:0 20px 60px #000c,0 0 22px #8844da66;color:#e3eef5;font:12px/1.5 'Segoe UI',sans-serif;}
+#sg-call-question h3{margin:0 0 8px;font-size:17px;text-align:center;color:#fff;}#sg-call-question .sg-call-target{text-align:center;color:#8affe5;font-size:11px;overflow-wrap:anywhere;}
+#sg-call-question .sg-call-message{background:#03070999;border:1px solid #394251;border-radius:4px;padding:8px;margin:8px 0;text-align:left;color:#bfcbdc;overflow-wrap:anywhere;white-space:pre-wrap;}
+#sg-call-question .sg-call-buttons{display:flex;gap:10px;margin-top:12px;}#sg-call-question button{flex:1;padding:8px;border:1px solid #32dbc1;border-radius:5px;background:linear-gradient(#236859,#10362d);color:#defff5;font-weight:700;cursor:pointer;box-shadow:inset 0 1px #fff2,0 2px #000;}
+#sg-call-question #sg-call-no{border-color:#a96aeb;background:linear-gradient(#4c306b,#281c39);color:#eddbff;}#sg-call-question button:hover{filter:brightness(1.2);}#sg-call-question button:active{transform:translateY(1px);}#sg-call-question button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+@media(max-width:600px){#shacal-glow-panel .sg-call-mode{grid-template-columns:1fr;}}
 `;
     const SHACAL_GAME_CSS = `            /*
              * Wyłączamy dokładnie natywny różowy glow Margonem:
@@ -5641,6 +5851,7 @@
     lootVisibilityObserver.observe(document.body, {subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ['style', 'class']});
 
     // 10. START: wszystkie stałe są już gotowe.
+    startHeroNoticeObserver();
     updateDynamicStyles();
     createPanel();
     setTimeout(() => {
