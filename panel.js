@@ -1,9 +1,9 @@
-/* Shacal core 6.2.0 */
+/* Shacal core 6.3.0 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.2.0';
+ctx.SHACAL_SCRIPT_VERSION = '6.3.0';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -673,6 +673,7 @@ ctx.commitPanelDraftSettings = function commitPanelDraftSettings(panel) {
             button.textContent = 'ZAPISANO ✓';
             setTimeout(() => { if (button.isConnected && !ctx.panelDraftDirty) button.textContent = 'ZAPISZ'; }, 900);
         }
+        return saved;
     };
 ctx.createPanel = function createPanel() {
         if (document.getElementById('shacal-glow-panel')) {
@@ -3194,3 +3195,95 @@ if (ctx.isGameWorldLoaded()) {
         ctx.lgWorldObserver.disconnect();
     }}});
 })(window.ShacalRuntime);
+
+window.ShacalRuntime.registerPart('core/ui-v630.js',{
+declare(ctx){
+    const keys={
+        glow:['addon_glow','enabled','lootSoundEnabled','color1','color2','color3','glow1','glow2','glow3','opacity1','opacity2','opacity3','width1','width2','width3','pulse','effect','glowStyle','sound','volume','dropMode'],
+        frames:['addon_frames','itemFramesEnabled','overrideGameItemFrames','itemFrameSet','frameCommon','frameUnique','frameHeroic','frameUpgraded','frameLegendary','upgradeBadgeEnabled','upgradeBadgeStyle','upgradeBadgeSyncRarityColor','itemTipsEnabled','itemTipSet','itemTipTextColors','itemTipOuterGlow','itemTipFont','tipUnique','tipHeroic','tipUpgraded','tipLegendary'],
+        chat:['addon_chat','chatAnnouncementsEnabled','chatMessageTemplate','chatEmoticonsEnabled'],
+        detector:['addon_detector','noticeHeros','noticeKolos','noticeTytan','heroCallMode','heroNoticeChannel','heroNoticesEnabled','heroNoticeTemplate'],
+        e2:['addon_e2','e2TooltipsEnabled','e2MiniColor','e2MaxColor','e2ReloggerEnabled','e2SelectedOnly','e2Characters']
+    };
+    ctx.addonSettingKeys=keys;
+    const failed=new Set();
+    const changed=id=>failed.has(id)||keys[id].some(k=>JSON.stringify(ctx.panelDraftSettings[k])!==JSON.stringify(ctx.settings[k]));
+    ctx.refreshAddonSaveState=panel=>{
+        if(!panel||!ctx.panelDraftSettings)return;
+        for(const id of Object.keys(keys)){
+            const dirty=changed(id);
+            panel.querySelectorAll('[data-save-addon="'+id+'"]').forEach(b=>{b.textContent=failed.has(id)?'PONÓW ZAPIS':dirty?'ZAPISZ ZMIANY':'ZAPISANO ✓';b.disabled=!dirty;});
+            const card=panel.querySelector('[data-addon-card="'+id+'"]');
+            if(card){card.classList.toggle('sg-addon-pending',dirty);card.querySelector('.sg-addon-note').textContent=failed.has(id)?'Nie udało się zapisać. Spróbuj ponownie.':dirty?'Masz niezapisane zmiany':'Ustawienia zapisane';}
+        }
+        ctx.panelDraftDirty=Object.keys(keys).some(changed);
+        const test=panel.querySelector('#sg-test');if(test)test.disabled=changed('glow');
+    };
+    ctx.commitAddonSettings=(panel,id)=>{
+        if(!keys[id])return;
+        const draft={...ctx.panelDraftSettings};
+        ctx.panelDraftSettings={...ctx.settings};
+        for(const key of keys[id])ctx.panelDraftSettings[key]=draft[key];
+        let saved=false;
+        try{saved=ctx.commitPanelDraftSettings(panel);}finally{ctx.panelDraftSettings=draft;}
+        if(saved){failed.delete(id);for(const key of keys[id])ctx.panelDraftSettings[key]=ctx.settings[key];}
+        else failed.add(id);
+        ctx.refreshAddonSaveState(panel);
+    };
+    const mark=ctx.markPanelDraftDirty;
+    ctx.markPanelDraftDirty=panel=>{mark(panel);ctx.refreshAddonSaveState(panel);};
+    const create=ctx.createPanel;
+    ctx.createPanel=()=>{
+        create();const panel=document.getElementById('shacal-glow-panel');if(!panel||panel.dataset.ui630)return;panel.dataset.ui630='1';
+        panel.querySelector('#sg-save-settings')?.remove();
+        const hint=panel.querySelector('.sg-save-hint');if(hint)hint.textContent='Każdy dodatek zapisujesz osobno.';
+        const brand=panel.querySelector('.brand-title');
+        if(brand){const img=document.createElement('img');img.className='sg-custom-logo';img.src='https://shacal97.github.io/Shacal-Customizer/assets/shacal-logo-v630.png';img.alt='Shacal Customizer';brand.replaceChildren(img);}
+        const back=document.createElement('button');back.className='sg-back-addons';back.type='button';back.textContent='← TWOJE DODATKI';back.addEventListener('click',()=>panel.querySelector('#sg-tab-home').click());panel.querySelector('.sg-page-heading').prepend(back);
+        const icons=['✧','▣','❝','⌖','◷'];
+        panel.querySelectorAll('.sg-addon-card').forEach((card,i)=>{
+            const id=card.querySelector('[data-addon-switch]').dataset.addonSwitch;card.dataset.addonCard=id;
+            const emblem=document.createElement('span');emblem.className='sg-card-emblem';emblem.textContent=icons[i];emblem.setAttribute('aria-hidden','true');card.prepend(emblem);
+            const row=document.createElement('div');row.className='sg-card-save';
+            const note=document.createElement('small');note.className='sg-addon-note';note.setAttribute('role','status');
+            const save=document.createElement('button');save.type='button';save.dataset.saveAddon=id;save.addEventListener('click',()=>ctx.commitAddonSettings(panel,id));row.append(note,save);card.append(row);
+        });
+        for(const tab of ['glow','frames','tips','chat','detector','e2']){
+            const id=tab==='tips'?'frames':tab;
+            const row=document.createElement('div');row.className='sg-detail-save';
+            const save=document.createElement('button');save.type='button';save.dataset.saveAddon=id;save.addEventListener('click',()=>ctx.commitAddonSettings(panel,id));
+            row.append(save);panel.querySelector('#sg-tab-'+tab+'-content').prepend(row);
+        }
+        const slider=panel.querySelector('#sg-panelTransparency');
+        slider?.addEventListener('change',()=>{ctx.settings.panelTransparency=Number(slider.value);const ok=ctx.saveSettings();if(hint)hint.textContent=ok?'Przezroczystość panelu zapisana.':'Nie udało się zapisać przezroczystości.';ctx.refreshAddonSaveState(panel);});
+        ctx.refreshAddonSaveState(panel);
+        const style=document.createElement('style');style.textContent=`
+#shacal-glow-panel .panel-tabs{display:none!important}
+#shacal-glow-panel .header{height:110px!important;background:radial-gradient(ellipse at 20% 0,#11373e66,transparent 65%),#06090e!important}
+#shacal-glow-panel .brand-title{height:90px;display:flex;align-items:center}
+#shacal-glow-panel .sg-custom-logo{width:280px;height:94px;object-fit:contain;display:block}
+#shacal-glow-panel .brand-mark,#shacal-glow-panel .brand-subtitle{display:none!important}
+#shacal-glow-panel .sg-compact-workspace{height:calc(100% - 174px)!important}
+#shacal-glow-panel .sg-page-heading{padding:12px 22px!important;background:#090e16;border-bottom:1px solid #20313c}
+#shacal-glow-panel .sg-page-heading h2{font-size:19px;margin:7px 0}
+#shacal-glow-panel .sg-back-addons{border:0;background:none;color:#6fedda;font-size:10px;letter-spacing:1.2px;padding:0;cursor:pointer}
+#shacal-glow-panel:has(#sg-tab-home-content.active) .sg-back-addons{display:none}
+#shacal-glow-panel .sg-addon-grid{gap:12px}
+#shacal-glow-panel .sg-addon-card{position:relative;padding:16px!important;border-radius:13px;border:1px solid #28414e;background:radial-gradient(ellipse at top right,#7130af22,transparent 80%),linear-gradient(140deg,#11242b,#0a101a);box-shadow:inset 0 1px #b2fff514,0 5px 18px #0003}
+#shacal-glow-panel .sg-addon-card h3{padding-right:35px;font-size:13px;letter-spacing:1.3px}
+#shacal-glow-panel .sg-card-emblem{position:absolute;right:16px;top:9px;font-size:27px;color:#48e6d1}
+#shacal-glow-panel .sg-addon-off{background:linear-gradient(140deg,#151a24,#0c1017);border-color:#2a303e}
+#shacal-glow-panel .sg-addon-off .sg-card-emblem{color:#74808f}
+#shacal-glow-panel .sg-card-save{margin-top:12px;padding-top:10px;border-top:1px solid #ffffff12;display:flex;align-items:center;justify-content:space-between;gap:8px}
+#shacal-glow-panel .sg-addon-note{font-size:10px;color:#899baa}
+#shacal-glow-panel [data-save-addon]{padding:8px 11px;border:1px solid #42d3bf;border-radius:6px;background:linear-gradient(#176658,#10392f);color:#dcfff6;font-size:10px;cursor:pointer;box-shadow:inset 0 1px #ffffff20}
+#shacal-glow-panel [data-save-addon]:disabled{opacity:.5;cursor:default;background:#16212a;border-color:#40525d}
+#shacal-glow-panel [data-save-addon]:not(:disabled):active{transform:translateY(1px)}
+#shacal-glow-panel .sg-addon-pending{border-color:#aa6df0}
+#shacal-glow-panel .sg-addon-pending .sg-addon-note{color:#d1b1fa}
+#shacal-glow-panel .sg-detail-save{display:flex;justify-content:flex-end;margin-bottom:14px;position:sticky;top:0;z-index:2;background:#080d13;padding:8px;border-radius:8px}
+#shacal-glow-panel .sg-save-footer{height:58px!important;min-height:58px!important;padding:8px 20px!important}
+@media(max-width:600px){#shacal-glow-panel .sg-custom-logo{width:190px;height:70px}#shacal-glow-panel .brand-title{height:75px}#shacal-glow-panel .sg-addon-grid{grid-template-columns:1fr}#shacal-glow-panel .header{height:110px!important}}
+`;document.head.append(style);
+    };
+},init(){}});

@@ -1,5 +1,5 @@
 {
-  "version": "6.2.0",
+  "version": "6.3.0",
   "scripts": [
     "panel.js",
     "addons/glow.js",
@@ -21,6 +21,7 @@
     "core/events-and-panel.js",
     "modules/relogger.js",
     "core/panel-settings.js",
-    "core/assets-and-startup.js"
+    "core/assets-and-startup.js",
+    "core/ui-v630.js"
   ]
 }

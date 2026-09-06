@@ -1,4 +1,4 @@
-/* Shacal ramki-dymki 6.2.0 */
+/* Shacal ramki-dymki 6.3.0 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/frames-and-tips.js", {declare(ctx){ctx.buildItemRarityFrameCss = function buildItemRarityFrameCss() {
         if (!ctx.addonFeatureEnabled('itemFramesEnabled')) return '';

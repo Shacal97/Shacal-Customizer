@@ -5,7 +5,7 @@
     const parts = new Map();
     const ctx = Object.create(null);
     const runtime = window.ShacalRuntime = {
-        version: '6.2.0', state: 'loading', context: ctx,
+        version: '6.3.0', state: 'loading', context: ctx,
         request: window.__shacalRequest,
         registerPart(id, part) {
             if (this.state !== 'loading') throw Error('Rejestracja po uruchomieniu: ' + id);
@@ -15,9 +15,7 @@
     };
     delete window.__shacalRequest;
     const status = document.createElement('div');
-    status.textContent = 'Shacal: pobieranie panelu i dodatków…';
     status.style.cssText = 'position:fixed;top:10px;left:10px;z-index:2000001;padding:12px;background:#10151e;color:#fff;border:1px solid #35ead0;border-radius:6px';
-    document.body.append(status);
     function loadScript(file, version) {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -46,6 +44,7 @@
     })().catch(error => {
         runtime.state = 'error';
         status.textContent = 'Shacal: ' + error.message + ' Odśwież grę, aby spróbować ponownie.';
+        document.body.append(status);
         console.error('[Shacal]', error);
     });
 })();

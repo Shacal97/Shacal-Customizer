@@ -1,4 +1,4 @@
-# Shacal — Panel dodatków v6.2.0
+# Shacal — Panel dodatków v6.3.0
 
 Mały instalator Tampermonkey pobiera panel i pięć osobnych, wykonywalnych skryptów. Nie pobiera fragmentów tekstu do sklejenia w jeden skrypt i nie używa eval do uruchamiania dodatków.
 
@@ -22,7 +22,7 @@ Skrypty rejestrują funkcje oraz inicjalizację w `ShacalRuntime`. Funkcje wspó
 1. Rozpakuj paczkę ZIP na komputerze.
 2. Otwórz repozytorium `Shacal97/Shacal-Customizer` i zakładkę Code.
 3. Wybierz Add file → Upload files.
-4. Przeciągnij **zawartość** rozpakowanego folderu, razem z katalogami `addons` i `assets`. Nie wgrywaj samego ZIP-a ani nadrzędnego folderu `Shacal_Repo_v6.2.0`.
+4. Przeciągnij **zawartość** rozpakowanego folderu, razem z katalogami `addons` i `assets`. Nie wgrywaj samego ZIP-a ani nadrzędnego folderu `Shacal_Repo_v6.3.0`.
 5. Zapisz pliki przez Commit changes. Jeśli istnieją pliki o tych samych nazwach, sprawdź zmianę przed zatwierdzeniem. Stary `Shacal_Customizer.user.js` nie musi być usuwany.
 6. W Settings → Pages wybierz Source: Deploy from a branch, Branch: main, folder: /(root), następnie Save. Jeśli repozytorium używa innej gałęzi, wybierz tę, do której wgrałeś pliki.
 7. Poczekaj na zakończenie publikacji Pages. Najpierw sprawdź adres manifestu, potem instalatora.
@@ -47,3 +47,11 @@ Jeśli jednego skryptu zabraknie, zestaw nie jest inicjalizowany; pojawia się k
 ## Testy
 
 Sprawdzono lokalne pobieranie przez przeglądarkę z symulowanymi odpowiedziami HTTP i danymi silnika gry. Nie jest to jeszcze test opublikowanego GitHub Pages ani rzeczywistej sesji gry z Tampermonkey. Po publikacji należy sprawdzić ładowanie plików, TEST legendy, dźwięk i E2 w grze.
+
+## Nowości v6.3.0
+
+Własne logo Shacal Customizer, usunięta górna lista dodatków, nawigacja przez kafelki i przycisk powrotu. Każdy kafelek ma oddzielny zapis oraz znacznik niezapisanych zmian. Przyciski zapisu są też wewnątrz ustawień. Zapis jednego dodatku nie zapisuje szkiców pozostałych. Ramki i dymki mają wspólny zapis. Przezroczystość jest preferencją panelu i zapisuje się oddzielnie po zakończeniu zmiany suwaka.
+
+Po wgraniu całej zawartości tej wersji i zakończeniu publikacji Pages zaktualizuj instalator z tego samego adresu install.user.js do v6.3.0. Nie trzeba zmieniać adresów.
+
+29 testów lokalnych przeszło: izolacja zapisu, obsługa błędu zapisu, panel mobilny, E2, warstwy ulepszeń i awarie pobierania. Nie wykonano testu nowego panelu w rzeczywistej sesji gry.

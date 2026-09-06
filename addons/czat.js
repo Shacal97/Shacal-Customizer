@@ -1,4 +1,4 @@
-/* Shacal czat 6.2.0 */
+/* Shacal czat 6.3.0 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/chat.js", {declare(ctx){ctx.buildChatEmoticonCatalogHtml = function buildChatEmoticonCatalogHtml() {
         return Object.entries(ctx.CHAT_EMOTICONS) .map(([name, config]) => {

@@ -1,4 +1,4 @@
-/* Shacal glow 6.2.0 */
+/* Shacal glow 6.3.0 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("modules/glow.js", {declare(ctx){ctx.stopAutomaticLootSounds = function stopAutomaticLootSounds() {
         for(const audio of ctx.activeLootSounds){try{audio.pause();audio.currentTime=0;audio.removeAttribute('src');audio.load();}catch{}}
