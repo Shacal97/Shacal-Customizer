@@ -1,27 +1,49 @@
-<div align="center">
+# Shacal — Panel dodatków v6.2.0
 
-# Shacal Customizer
+Mały instalator Tampermonkey pobiera panel i pięć osobnych, wykonywalnych skryptów. Nie pobiera fragmentów tekstu do sklejenia w jeden skrypt i nie używa eval do uruchamiania dodatków.
 
-Shacal Customizer to pakiet personalizacji interfejsu Margonem przygotowany dla świata Solphyr.
+## Pliki
 
-**Aktualna wersja: 6.0.0**
+- `install.user.js`: instalator, około 1,7 KB.
+- `bootstrap.js`: pobieranie, kontrola kompletności i uruchamianie.
+- `manifest.json`: wersja oraz lista plików i kolejność inicjalizacji.
+- `panel.js`: wspólny panel, ustawienia, obsługa zdarzeń i infrastruktura.
+- `addons/glow.js`: poświata i dźwięki.
+- `addons/ramki-dymki.js`: ramki, dymki i znaczniki ulepszeń.
+- `addons/czat.js`: ogłoszenia legend, emotikony oraz transport wiadomości współdzielony z wołaczem.
+- `addons/wolacz.js`: powiadomienia o potworach.
+- `addons/przelogowanie.js`: liczniki E2 i podświetlenie postaci.
+- `assets/`: 30 plików MP3 i 10 grafik PNG.
 
-## Instalacja
+Skrypty rejestrują funkcje oraz inicjalizację w `ShacalRuntime`. Funkcje współpracują przez wspólny kontekst `ctx`, zamiast polegać na zmiennych z jednego sklejonego pliku. Cały zestaw kodu pobierany jest przy uruchomieniu, ponieważ dodatki współdzielą infrastrukturę. Przełączniki decydują o działaniu funkcji; nie oznaczają usunięcia ich kodu z pamięci. Wspólne obserwatory nadal pracują. Nagrania są pobierane przez przeglądarkę przy użyciu, a nie jako Base64 w instalatorze.
 
-**1.** Zainstaluj rozszerzenie Tampermonkey w swojej przeglądarce.
+## Wgranie do repozytorium
 
-**2.** [Zainstaluj Shacal Customizer](https://raw.githubusercontent.com/Shacal97/Shacal-Customizer/main/Shacal_Customizer.user.js)
+1. Rozpakuj paczkę ZIP na komputerze.
+2. Otwórz repozytorium `Shacal97/Shacal-Customizer` i zakładkę Code.
+3. Wybierz Add file → Upload files.
+4. Przeciągnij **zawartość** rozpakowanego folderu, razem z katalogami `addons` i `assets`. Nie wgrywaj samego ZIP-a ani nadrzędnego folderu `Shacal_Repo_v6.2.0`.
+5. Zapisz pliki przez Commit changes. Jeśli istnieją pliki o tych samych nazwach, sprawdź zmianę przed zatwierdzeniem. Stary `Shacal_Customizer.user.js` nie musi być usuwany.
+6. W Settings → Pages wybierz Source: Deploy from a branch, Branch: main, folder: /(root), następnie Save. Jeśli repozytorium używa innej gałęzi, wybierz tę, do której wgrałeś pliki.
+7. Poczekaj na zakończenie publikacji Pages. Najpierw sprawdź adres manifestu, potem instalatora.
 
-**3.** Potwierdź instalację skryptu w Tampermonkey.
+Konfiguracja publikacji: [oficjalna dokumentacja GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
-Po instalacji uruchom świat Solphyr. Ikona Shacal Customizer pojawi się w interfejsie gry.
+Adresy po publikacji:
 
-## Aktualizacje
+- `https://shacal97.github.io/Shacal-Customizer/manifest.json`
+- `https://shacal97.github.io/Shacal-Customizer/install.user.js`
 
-Skrypt posiada własne sprawdzanie dostępności nowej wersji. Aktualizacje korzystają z pliku `Shacal_Customizer.user.js` znajdującego się w tym repozytorium.
+Te adresy są już wpisane w kodzie. Zmiana nazwy repozytorium lub domeny wymaga ich aktualizacji.
 
-## Autor
+## Pierwsze uruchomienie
 
-**Shacal**
+Wyłącz poprzedni duży skrypt Shacal w Tampermonkey. Następnie zainstaluj `install.user.js` z opublikowanego adresu i odśwież grę. Nowy panel korzysta z dotychczasowego klucza ustawień. Nie uruchamiaj obu wersji jednocześnie, ponieważ obie modyfikowałyby te same elementy gry.
 
-</div>
+Instalator ograniczono do `https://solphyr.margonem.pl/*`, bez ramek iframe. Nie uruchamia panelu na stronie głównej, forum ani innych światach.
+
+Jeśli jednego skryptu zabraknie, zestaw nie jest inicjalizowany; pojawia się komunikat o błędzie. Po naprawieniu publikacji odśwież grę. Nie ma trybu offline ani automatycznego powrotu do starej wersji. Przy aktualizacji publikuj zgodny zestaw manifestu, bootstrapu, panelu, dodatków i instalatora.
+
+## Testy
+
+Sprawdzono lokalne pobieranie przez przeglądarkę z symulowanymi odpowiedziami HTTP i danymi silnika gry. Nie jest to jeszcze test opublikowanego GitHub Pages ani rzeczywistej sesji gry z Tampermonkey. Po publikacji należy sprawdzić ładowanie plików, TEST legendy, dźwięk i E2 w grze.

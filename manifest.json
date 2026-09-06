@@ -1,0 +1,26 @@
+{
+  "version": "6.2.0",
+  "scripts": [
+    "panel.js",
+    "addons/glow.js",
+    "addons/ramki-dymki.js",
+    "addons/czat.js",
+    "addons/wolacz.js",
+    "addons/przelogowanie.js"
+  ],
+  "parts": [
+    "core/start.js",
+    "addon-registry.js",
+    "core/settings.js",
+    "modules/glow.js",
+    "modules/frames-and-tips.js",
+    "core/styles-and-loot.js",
+    "modules/chat.js",
+    "modules/caller.js",
+    "modules/upgrade-badges.js",
+    "core/events-and-panel.js",
+    "modules/relogger.js",
+    "core/panel-settings.js",
+    "core/assets-and-startup.js"
+  ]
+}
