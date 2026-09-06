@@ -4,7 +4,7 @@
 
 Shacal Customizer to pakiet personalizacji interfejsu Margonem przygotowany dla świata Solphyr.
 
-**Aktualna wersja: 5.5.0**
+**Aktualna wersja: 6.0.0**
 
 ## Instalacja
 
@@ -15,32 +15,6 @@ Shacal Customizer to pakiet personalizacji interfejsu Margonem przygotowany dla 
 **3.** Potwierdź instalację skryptu w Tampermonkey.
 
 Po instalacji uruchom świat Solphyr. Ikona Shacal Customizer pojawi się w interfejsie gry.
-
-## Główne funkcje
-
-### GLOW
-
-Efekty wizualne dla okna łupu i mapy. Dostępne są style Classic, Neon 80s oraz Inner Aura wraz z regulacją kolorów, intensywności, szerokości i animacji.
-
-### Ramki i dymki
-
-Własne zestawy ramek przedmiotów, zmiana wyglądu tooltipów, kolory rzadkości oraz dodatkowe fonty.
-
-### Poziom ulepszenia
-
-Czytelne oznaczenia poziomu ulepszenia przedmiotów z możliwością dopasowania wyglądu do rzadkości.
-
-### Dźwięki
-
-Własne dźwięki dla łupu oraz osobny tryb testowy w panelu ustawień.
-
-### Czat
-
-Opcjonalne automatyczne ogłoszenie zdobytej legendy oraz zestaw emotek wyświetlanych bezpośrednio na czacie.
-
-### Panel Shacal Customizer
-
-Przenośna ikona otwierająca panel, zapis ustawień, podgląd TEST oraz wbudowane sprawdzanie aktualizacji.
 
 ## Aktualizacje
 
