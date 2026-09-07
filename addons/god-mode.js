@@ -1,7 +1,7 @@
 // ==UserScript==
 // God Mode — Customizacja efektów wizualnych wokół postaci.
 // @namespace    shacal.aura.test
-// @version      0.3.6
+// @version      0.3.7
 // @description  Customizacja efektów wizualnych wokół postaci.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
@@ -24,6 +24,8 @@
  state.rgbMulti=raw.rgbMulti===true;
  state.haloRgbMulti=raw.haloRgbMulti===true;
  state.haloRgbSpeed=clamp(raw.haloRgbSpeed ?? state.rgbSpeed,.2,3,1);
+ state.pentagramSpeed=clamp(raw.pentagramSpeed,.75,1.5,.9);
+ state.pentagramSize=clamp(raw.pentagramSize,1,2,1);
  const styles=['soft','smoke','fire','chakra','petals'];
  state.style='soft';
  state.neonStyle=['soft','pentagram'].includes(raw.neonStyle)?raw.neonStyle:'soft';
@@ -36,6 +38,9 @@
  state.trailColor=/^#[0-9a-f]{6}$/i.test(raw.trailColor)?raw.trailColor:'#39e4ff';
  state.trailRgb=raw.trailRgb===true;
  state.trailRgbMulti=raw.trailRgbMulti===true;
+ if(state.rgbMulti)state.rgb=true;
+ if(state.haloRgbMulti)state.haloRgb=true;
+ if(state.trailRgbMulti)state.trailRgb=true;
  state.trailLife=clamp(raw.trailLife,1,8,3);
  state.trailSize=clamp(raw.trailSize,.5,2,1);
  state.trailShape=['foot','cat','bear','duck','dog'].includes(raw.trailShape)?raw.trailShape:'foot';
@@ -53,6 +58,9 @@
  #shacal-aura-test button{color:#9affed;background:linear-gradient(#214c49,#132521);border:1px solid #35d9c5;border-radius:7px;padding:9px 15px;cursor:pointer;font:600 12px Arial,sans-serif}
  #shacal-aura-test button[data-disco]{padding:6px 10px;font-size:11px;border-color:#9762b3;color:#ebc6ff;background:#25192e}
  #shacal-aura-test button[data-disco][aria-pressed=true]{background:linear-gradient(110deg,#632875,#175d64);border-color:#ee94ff;color:#fff;box-shadow:0 0 9px #d751e64d}
+ #shacal-aura-test .gm-party-controls{display:flex;align-items:center;gap:7px;margin:16px 0 8px;padding:10px 0;border-top:1px solid #ffffff20}
+ #shacal-aura-test .gm-party-controls strong{margin-right:auto;color:#cfa6ee;font-size:12px}
+ #shacal-aura-test .gm-party-controls [data-music]{padding:6px 12px}
  #shacal-aura-test section{width:100%;max-width:none;max-height:none;height:100%;overflow-y:auto;padding:10px 20px 20px;margin:0;background:transparent;border:0;border-radius:0;box-shadow:none}
  #shacal-aura-test section[hidden]{display:none}
  #shacal-aura-test h3{display:none}
@@ -81,21 +89,21 @@
  <label><input type="checkbox" class="aura-switch" role="switch" data-key="neonEnabled"> Włącz neon</label>
  <label>Styl <select data-key="neonStyle"><option value="soft">Neon</option><option value="pentagram">Pentagram</option></select></label>
  <label data-pentagram-options hidden>Wariant pentagramu<select data-key="pentagramStyle"><option value="classic">Klasyczny</option><option value="double">Podwójny krąg</option><option value="arcane">Runiczny</option><option value="ritual">Rytualny</option><option value="static">Statyczny</option></select></label>
+ <label data-pentagram-options hidden>Prędkość pentagramu <output data-value="pentagramSpeed"></output><input type="range" min="0.75" max="1.5" step="0.05" data-key="pentagramSpeed"></label>
+ <label data-pentagram-options hidden>Rozmiar pentagramu <output data-value="pentagramSize"></output><input type="range" min="1" max="2" step="0.05" data-key="pentagramSize"></label>
  <label>Kolor <input type="color" data-key="color"></label>
  <label><input type="checkbox" data-key="rgb"> RGB · płynna zmiana kolorów</label>
  <label><input type="checkbox" data-key="rgbMulti"> RGB wielokolorowe · kilka kolorów jednocześnie</label>
  <label>Szybkość RGB <output data-value="rgbSpeed"></output><input type="range" min="0.2" max="3" step="0.1" data-key="rgbSpeed"></label>
-  <button type="button" data-disco="disco" aria-pressed="false">Polo</button>
  <label>Rozmiar <output data-value="size"></output><input type="range" min="0.5" max="2" step="0.05" data-key="size"></label>
  <label>Intensywność <output data-value="opacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="opacity"></label>
  </div><div class="gm-pane" data-gm-pane="aura"><h4>Poświata wokół sylwetki</h4>
  <label><input type="checkbox" class="aura-switch" role="switch" data-key="halo"> Włącz poświatę</label>
- <label>Styl <select data-key="haloStyle"><option value="soft">Miękka poświata</option><option value="smoke">Dym</option><option value="fire">Ogień</option><option value="chakra">Chakra</option></select></label>
+ <label>Styl <select data-key="haloStyle"><option value="soft">Miękka poświata</option><option value="smoke">Dym</option><option value="fire">Ogień</option><option value="chakra">Chakra</option><option value="petals">Płatki wiśni</option></select></label>
  <label>Kolor <input type="color" data-key="haloColor"></label>
  <label><input type="checkbox" data-key="haloRgb"> RGB · płynna zmiana kolorów</label>
  <label><input type="checkbox" data-key="haloRgbMulti"> RGB wielokolorowe · kilka kolorów jednocześnie</label>
  <label>Szybkość RGB <output data-value="haloRgbSpeed"></output><input type="range" min="0.2" max="3" step="0.1" data-key="haloRgbSpeed"></label>
-  <button type="button" data-disco="haloDisco" aria-pressed="false">Disco</button>
  <label>Rozmiar <output data-value="haloSize"></output><input type="range" min="0.5" max="2" step="0.05" data-key="haloSize"></label>
  <label>Intensywność <output data-value="haloOpacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="haloOpacity"></label>
  <label>Tempo <output data-value="speed"></output><input type="range" min="0" max="2" step="0.1" data-key="speed"></label>
@@ -105,11 +113,10 @@
  <label>Kolor <input type="color" data-key="trailColor"></label>
  <label><input type="checkbox" data-key="trailRgb"> RGB</label>
  <label><input type="checkbox" data-key="trailRgbMulti"> RGB wielokolorowe</label>
- <label><input type="checkbox" data-key="trailRgbMulti"> RGB wielokolorowe</label>
  <label>Zanikanie (sekundy) <output data-value="trailLife"></output><input type="range" min="1" max="8" step="0.5" data-key="trailLife"></label>
  <label>Rozmiar <output data-value="trailSize"></output><input type="range" min="0.5" max="2" step="0.1" data-key="trailSize"></label>
  <label>Intensywność <output data-value="trailOpacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="trailOpacity"></label>
-  <small data-status>Oczekiwanie na postać…</small><small>Ustawienia zapisują się od razu.</small><button type="button" data-music disabled style="width:100%;margin-top:14px">START</button></section>`;
+   </div><div class="gm-party-controls"><strong>Disco Polo</strong><button type="button" data-disco="disco" aria-pressed="false">Disco</button><button type="button" data-disco="haloDisco" aria-pressed="false">Polo</button><button type="button" data-music disabled>START</button></div><small data-status>Oczekiwanie na postać…</small><small>Ustawienia zapisują się od razu.</small></section>`;
  const godHost=document.getElementById('shacal-godmode-host');(godHost||document.body).append(root);
  if(!godHost){const mover=setInterval(()=>{const host=document.getElementById('shacal-godmode-host');if(host){host.append(root);clearInterval(mover);}},1000);}
  const panel=root.querySelector('section'),status=root.querySelector('[data-status]');
@@ -131,21 +138,39 @@
   const syncColorControls=()=>{
   musicButton.disabled=!canPlay();
   if(!canPlay()&&playing)stopMusic();
-  root.querySelector('[data-key="color"]').disabled=state.rgb;
-  root.querySelector('[data-key="haloColor"]').disabled=state.haloRgb;
+   const neonRgb=root.querySelector('[data-key="rgb"]'),neonMulti=root.querySelector('[data-key="rgbMulti"]');
+   const haloRgb=root.querySelector('[data-key="haloRgb"]'),haloMulti=root.querySelector('[data-key="haloRgbMulti"]');
+   const trailRgb=root.querySelector('[data-key="trailRgb"]'),trailMulti=root.querySelector('[data-key="trailRgbMulti"]');
+   root.querySelector('[data-key="color"]').disabled=state.rgb;
+   root.querySelector('[data-key="haloColor"]').disabled=state.haloRgb;
    root.querySelector('[data-key="trailColor"]').disabled=state.trailRgb;
-   const pentagramOptions=root.querySelector('[data-pentagram-options]');
-   if(pentagramOptions)pentagramOptions.hidden=state.neonStyle!=='pentagram';
+   neonRgb.checked=state.rgb&&!state.rgbMulti;neonMulti.checked=state.rgbMulti;
+   haloRgb.checked=state.haloRgb&&!state.haloRgbMulti;haloMulti.checked=state.haloRgbMulti;
+   trailRgb.checked=state.trailRgb&&!state.trailRgbMulti;trailMulti.checked=state.trailRgbMulti;
+   neonRgb.disabled=state.rgbMulti;neonMulti.disabled=state.rgb&&!state.rgbMulti;
+   haloRgb.disabled=state.haloRgbMulti;haloMulti.disabled=state.haloRgb&&!state.haloRgbMulti;
+   trailRgb.disabled=state.trailRgbMulti;trailMulti.disabled=state.trailRgb&&!state.trailRgbMulti;
+   for(const pentagramOption of root.querySelectorAll('[data-pentagram-options]'))pentagramOption.hidden=state.neonStyle!=='pentagram';
   if(!state.trail||!state.enabled){footprints=[];lastStep=null;}
   for(const [mode,rgb,speed] of [['disco','rgb','rgbSpeed'],['haloDisco','haloRgb','haloRgbSpeed']]){
    root.querySelector(`[data-disco="${mode}"]`).setAttribute('aria-pressed',String(state[mode]&&state[rgb]));
-   root.querySelector(`[data-key="${speed}"]`).disabled=state[mode]&&state[rgb];
+    root.querySelector(`[data-key="${speed}"]`).disabled=!state[rgb]||(state[mode]&&state[rgb]);
   }
  };
  for(const input of root.querySelectorAll('[data-key]')){
-  const k=input.dataset.key;if(input.type==='checkbox')input.checked=state[k];else input.value=state[k];
+   const k=input.dataset.key;if(input.type==='checkbox'){input.checked=k==='rgb'?state.rgb&&!state.rgbMulti:k==='rgbMulti'?state.rgbMulti:k==='haloRgb'?state.haloRgb&&!state.haloRgbMulti:k==='haloRgbMulti'?state.haloRgbMulti:k==='trailRgb'?state.trailRgb&&!state.trailRgbMulti:k==='trailRgbMulti'?state.trailRgbMulti:state[k];}else input.value=state[k];
   const output=root.querySelector(`[data-value="${k}"]`);if(output)output.textContent=state[k];
-  input.oninput=()=>{state[k]=input.type==='checkbox'?input.checked:(input.type==='color'||input.tagName==='SELECT')?input.value:Number(input.value);if(k==='rgbMulti'&&state.rgbMulti){state.rgb=true;root.querySelector('[data-key="rgb"]').checked=true;}if(k==='haloRgbMulti'&&state.haloRgbMulti){state.haloRgb=true;root.querySelector('[data-key="haloRgb"]').checked=true;}if(k==='trailRgbMulti'&&state.trailRgbMulti){state.trailRgb=true;root.querySelector('[data-key="trailRgb"]').checked=true;}if(output)output.textContent=state[k];syncColorControls();announceChange();};
+   input.oninput=()=>{state[k]=input.type==='checkbox'?input.checked:(input.type==='color'||input.tagName==='SELECT')?input.value:Number(input.value);
+    if(k==='color'){state.rgb=false;state.rgbMulti=false;}
+    if(k==='haloColor'){state.haloRgb=false;state.haloRgbMulti=false;}
+    if(k==='trailColor'){state.trailRgb=false;state.trailRgbMulti=false;}
+    if(k==='rgb'){state.rgb=input.checked;if(input.checked)state.rgbMulti=false;}
+    if(k==='rgbMulti'){state.rgbMulti=input.checked;state.rgb=input.checked;}
+    if(k==='haloRgb'){state.haloRgb=input.checked;if(input.checked)state.haloRgbMulti=false;}
+    if(k==='haloRgbMulti'){state.haloRgbMulti=input.checked;state.haloRgb=input.checked;}
+    if(k==='trailRgb'){state.trailRgb=input.checked;if(input.checked)state.trailRgbMulti=false;}
+    if(k==='trailRgbMulti'){state.trailRgbMulti=input.checked;state.trailRgb=input.checked;}
+    if(output)output.textContent=state[k];syncColorControls();announceChange();};
  }
  syncColorControls();
  for(const discoButton of root.querySelectorAll('[data-disco]'))discoButton.onclick=()=>{
@@ -266,10 +291,10 @@
     const style=halo?state.haloStyle:state.style,size=halo?state.haloSize:state.size,opacity=halo?state.haloOpacity:state.opacity;
     const height=halo?hero.fh*size:17*size,width=23*size;
    if(!halo&&state.neonStyle==='pentagram'){
-    const scale=hero.fh*size/165,style=state.pentagramStyle;
+    const scale=hero.fh*state.pentagramSize/165,style=state.pentagramStyle;
     g.save();try{
      g.translate(0,3);g.scale(scale,scale);g.scale(1,.58);
-     if(style!=='static')g.rotate(t*.55);
+     if(style!=='static')g.rotate(performance.now()/1000*state.pentagramSpeed);
      const strokeCircle=(radius,alphaValue,width,blur,phase=0)=>{g.save();g.globalAlpha=alpha*opacity*alphaValue;g.strokeStyle=color(1,false,phase);g.shadowColor=color(1,false,phase);g.shadowBlur=blur;g.lineWidth=width;g.beginPath();g.arc(0,0,radius,0,Math.PI*2);g.stroke();g.restore();};
      const strokeStar=(radius,alphaValue,width,blur,phase=0)=>{g.save();g.globalAlpha=alpha*opacity*alphaValue;g.strokeStyle=color(1,false,phase);g.shadowColor=color(1,false,phase);g.shadowBlur=blur;g.lineWidth=width;g.lineCap='round';g.lineJoin='round';g.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?.4:1,x=Math.cos(a)*radius*r,y=Math.sin(a)*radius*r;i?g.lineTo(x,y):g.moveTo(x,y);}g.closePath();g.stroke();g.restore();};
      const segmentedRing=(radius,alphaValue,width,blur,count,gap,phase=0)=>{g.save();g.globalAlpha=alpha*opacity*alphaValue;g.strokeStyle=color(1,false,phase);g.shadowColor=color(1,false,phase);g.shadowBlur=blur;g.lineWidth=width;g.lineCap='round';for(let i=0;i<count;i++){const start=i*Math.PI*2/count+gap,end=(i+1)*Math.PI*2/count-gap;g.beginPath();g.arc(0,0,radius,start,end);g.stroke();}g.restore();};
@@ -364,7 +389,8 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.3.6',save:saveGodMode,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.3.7',save:saveGodMode,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
 })();
+
 
 

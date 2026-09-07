@@ -76,7 +76,9 @@ God Mode jest ładowany jako osobny moduł i udostępnia ustawienia aury, neonu 
 
 ## Nowości v6.4.5
 
-God Mode ma teraz wybór stylu **Neon / Pentagram**. Pentagram udostępnia warianty Klasyczny, Podwójny krąg, Runiczny, Rytualny i Statyczny. Dla neonu, pentagramu oraz poświaty można włączyć RGB wielokolorowe, dzięki któremu kilka odcieni jest widocznych jednocześnie. Płatki wiśni również obsługują RGB i zachowują osobne ustawienia od pentagramu.
+God Mode ma teraz wybór stylu **Neon / Pentagram**. Pentagram udostępnia warianty Klasyczny, Podwójny krąg, Runiczny, Rytualny i Statyczny oraz własne suwaki rozmiaru 1.00–2.00 i prędkości 0.75–1.50. Poświata zawiera także styl Płatki wiśni. Stały kolor, RGB i RGB wielokolorowe są wzajemnie wykluczającymi się trybami. Przyciski Disco, Polo i START są dostępne na dole God Moda; muzyka odblokowuje się po włączeniu obu trybów.
+
+
 
 
 
