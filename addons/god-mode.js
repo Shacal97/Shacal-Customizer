@@ -33,21 +33,21 @@
  state.trailRgb=raw.trailRgb===true;
  state.trailLife=clamp(raw.trailLife,1,8,3);
  state.trailSize=clamp(raw.trailSize,.5,2,1);
- state.trailShape=['foot','cat','bear','duck','dog','slime'].includes(raw.trailShape)?raw.trailShape:'foot';
+ state.trailShape=['foot','cat','bear','duck','dog'].includes(raw.trailShape)?raw.trailShape:'foot';
  state.trailOpacity=clamp(raw.trailOpacity,.1,1,.7);
  let footprints=[],lastStep=null,stepSide=1,trailMap=null,trailMapId=null,trailHero=null;
  state.overrideNative=raw.overrideNative!==false;
  let binding=null,disposed=false,lastError='',draws=0,lastPaintAt=0,lastPaintX=NaN,lastPaintY=NaN;
  const root=document.createElement('div');root.id='shacal-aura-test';
  root.innerHTML=`<style>
- #shacal-aura-test{font:13px/1.5 Arial,sans-serif;color:#eef5ff;position:relative;right:auto;bottom:auto;z-index:auto;width:100%}
+ #shacal-aura-test{font:13px/1.5 Arial,sans-serif;color:#eef5ff;position:relative;right:auto;bottom:auto;z-index:auto;width:100%;height:100%}
  #shacal-aura-test *{box-sizing:border-box}
  #shacal-aura-test button{color:#9affed;background:linear-gradient(#214c49,#132521);border:1px solid #35d9c5;border-radius:7px;padding:9px 15px;cursor:pointer;font:600 12px Arial,sans-serif}
  #shacal-aura-test button[data-disco]{padding:6px 10px;font-size:11px;border-color:#9762b3;color:#ebc6ff;background:#25192e}
  #shacal-aura-test button[data-disco][aria-pressed=true]{background:linear-gradient(110deg,#632875,#175d64);border-color:#ee94ff;color:#fff;box-shadow:0 0 9px #d751e64d}
- #shacal-aura-test section{width:270px;max-width:calc(100vw - 36px);max-height:calc(100vh - 150px);overflow-y:auto;padding:18px;margin-bottom:8px;background:linear-gradient(140deg,#10191f,#1c1125);border:1px solid #46dfce;border-radius:12px;box-shadow:0 8px 30px #0009}
+ #shacal-aura-test section{width:100%;max-width:none;max-height:none;height:100%;overflow-y:auto;padding:10px 20px 20px;margin:0;background:transparent;border:0;border-radius:0;box-shadow:none}
  #shacal-aura-test section[hidden]{display:none}
- #shacal-aura-test h3{margin:0 0 12px;color:#76f4dc}
+ #shacal-aura-test h3{display:none}
  #shacal-aura-test h4{margin:16px 0 6px;padding-top:12px;border-top:1px solid #ffffff20;color:#cfa6ee;font-size:12px}
  #shacal-aura-test .gm-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 0 12px}
  #shacal-aura-test .gm-tabs button{padding:7px 4px;border-color:#334953;background:#17222a;color:#a9bac5}
@@ -64,7 +64,7 @@
  #shacal-aura-test input[type=color]:disabled{opacity:.35;cursor:not-allowed}
  #shacal-aura-test output{float:right;color:#77ebdc}
  #shacal-aura-test small{display:block;color:#b3c1cd}
- </style><section hidden><h3>Aura postaci · TEST</h3>
+ </style><section><h3>Aura postaci</h3>
  <label><input type="checkbox" data-key="enabled"> Włącz aurę</label>
  <label><input type="checkbox" data-key="overrideNative"> Zastąp poświaty gry</label>
  <nav class="gm-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-gm-tab="aura">Aura</button><button type="button" role="tab" aria-selected="false" data-gm-tab="neon">Neon</button><button type="button" role="tab" aria-selected="false" data-gm-tab="trails">Ślady</button></nav>
@@ -89,21 +89,20 @@
  <label>Tempo <output data-value="speed"></output><input type="range" min="0" max="2" step="0.1" data-key="speed"></label>
  </div><div class="gm-pane" data-gm-pane="trails"><h4>Neonowe ślady stóp</h4>
  <label><input type="checkbox" data-key="trail"> Zostawiaj ślady podczas chodzenia</label>
- <label>Rodzaj śladów <select data-key="trailShape"><option value="foot">Stopy</option><option value="cat">Kocie łapki</option><option value="bear">Niedźwiedzie łapy</option><option value="duck">Kacze łapki</option><option value="dog">Psie łapy</option><option value="slime">Śluz ślimaka</option></select></label>
+ <label>Rodzaj śladów <select data-key="trailShape"><option value="foot">Stopy</option><option value="cat">Kocie łapki</option><option value="bear">Niedźwiedzie łapy</option><option value="duck">Kacze łapki</option><option value="dog">Psie łapy</option></select></label>
  <label>Kolor <input type="color" data-key="trailColor"></label>
  <label><input type="checkbox" data-key="trailRgb"> RGB</label>
  <label>Zanikanie (sekundy) <output data-value="trailLife"></output><input type="range" min="1" max="8" step="0.5" data-key="trailLife"></label>
  <label>Rozmiar <output data-value="trailSize"></output><input type="range" min="0.5" max="2" step="0.1" data-key="trailSize"></label>
  <label>Intensywność <output data-value="trailOpacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="trailOpacity"></label>
- <small data-status>Oczekiwanie na postać…</small><small>Ustawienia zapisują się od razu.</small><button type="button" data-music disabled style="width:100%;margin-top:14px">START</button></section><button type="button" aria-expanded="false">AURA</button>`;
+  <small data-status>Oczekiwanie na postać…</small><small>Ustawienia zapisują się od razu.</small><button type="button" data-music disabled style="width:100%;margin-top:14px">START</button></section>`;
  const godHost=document.getElementById('shacal-godmode-host');(godHost||document.body).append(root);
  if(!godHost){const mover=setInterval(()=>{const host=document.getElementById('shacal-godmode-host');if(host){host.append(root);clearInterval(mover);}},1000);}
- const panel=root.querySelector('section'),button=root.querySelector('button[aria-expanded]'),status=root.querySelector('[data-status]');
+ const panel=root.querySelector('section'),status=root.querySelector('[data-status]');
  const gmPanes=[...root.querySelectorAll('[data-gm-pane]')];
  const selectGmTab=tab=>{for(const pane of gmPanes)pane.hidden=pane.dataset.gmPane!==tab;for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.setAttribute('aria-selected',String(tabButton.dataset.gmTab===tab));};
  for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.onclick=()=>selectGmTab(tabButton.dataset.gmTab);
  selectGmTab('aura');
- button.onclick=()=>{panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));};
  const musicButton=root.querySelector('[data-music]');
  let music=null,playing=false,playToken=0;
  const canPlay=()=>state.enabled&&state.neonEnabled&&state.halo&&state.disco&&state.rgb&&state.haloDisco&&state.haloRgb;
@@ -206,12 +205,15 @@
   if(frontOnly&&(!state.halo||state.haloStyle!=='chakra'))return;
   if(!state.enabled||disposed||!hero.imgLoaded||typeof g?.createRadialGradient!=='function')return;
   const paintNow=performance.now();
-  if(!frontOnly&&lastPaintAt&&paintNow-lastPaintAt<33)return;
+  // The game redraws its character canvas every frame. Trails must be painted
+  // on every draw call, otherwise the canvas is cleared between throttled paints
+  // and the footprints visibly blink.
+  if(!frontOnly&&!state.trail&&lastPaintAt&&paintNow-lastPaintAt<33)return;
   const x=hero.getCharacterLeft()+hero.fw/2,y=hero.getCharacterTop()+hero.fh-3;
   if(!Number.isFinite(x)||!Number.isFinite(y))return;
   if(!frontOnly){
    const moved=Math.abs(x-lastPaintX)+Math.abs(y-lastPaintY)>0.1;
-   if(!moved&&lastPaintAt&&paintNow-lastPaintAt<100)return;
+   if(!moved&&!state.trail&&lastPaintAt&&paintNow-lastPaintAt<100)return;
    lastPaintAt=paintNow;lastPaintX=x;lastPaintY=y;
   }
   const seconds=performance.now()/1000;
