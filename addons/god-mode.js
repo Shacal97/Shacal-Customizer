@@ -1,8 +1,8 @@
 // ==UserScript==
 // God Mode — Customizacja efektów wizualnych wokół postaci.
 // @namespace    shacal.aura.test
-// @version      0.3.4
-// @description  Osobny test aury pod własną postacią. Ustawienia pod przyciskiem AURA.
+// @version      0.3.6
+// @description  Customizacja efektów wizualnych wokół postaci.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
 // @grant        none
@@ -21,9 +21,13 @@
  state.rgbSpeed=clamp(raw.rgbSpeed,.2,3,1);
  state.haloColor=/^#[0-9a-f]{6}$/i.test(raw.haloColor)?raw.haloColor:state.color;
  state.haloRgb=typeof raw.haloRgb==='boolean'?raw.haloRgb:state.rgb;
+ state.rgbMulti=raw.rgbMulti===true;
+ state.haloRgbMulti=raw.haloRgbMulti===true;
  state.haloRgbSpeed=clamp(raw.haloRgbSpeed ?? state.rgbSpeed,.2,3,1);
- const styles=['soft','smoke','fire','chakra'];
+ const styles=['soft','smoke','fire','chakra','petals'];
  state.style='soft';
+ state.neonStyle=['soft','pentagram'].includes(raw.neonStyle)?raw.neonStyle:'soft';
+ state.pentagramStyle=['classic','double','arcane','ritual','static'].includes(raw.pentagramStyle)?raw.pentagramStyle:'classic';
  state.haloStyle=styles.includes(raw.haloStyle)?raw.haloStyle:'soft';
  state.disco=raw.disco===true;
  state.haloDisco=raw.haloDisco===true;
@@ -31,6 +35,7 @@
  state.neonEnabled=raw.neonEnabled!==false;
  state.trailColor=/^#[0-9a-f]{6}$/i.test(raw.trailColor)?raw.trailColor:'#39e4ff';
  state.trailRgb=raw.trailRgb===true;
+ state.trailRgbMulti=raw.trailRgbMulti===true;
  state.trailLife=clamp(raw.trailLife,1,8,3);
  state.trailSize=clamp(raw.trailSize,.5,2,1);
  state.trailShape=['foot','cat','bear','duck','dog'].includes(raw.trailShape)?raw.trailShape:'foot';
@@ -38,6 +43,9 @@
  let footprints=[],lastStep=null,stepSide=1,trailMap=null,trailMapId=null,trailHero=null;
  state.overrideNative=raw.overrideNative!==false;
  let binding=null,disposed=false,lastError='',draws=0,lastPaintAt=0,lastPaintX=NaN,lastPaintY=NaN;
+ let godModeDirty=false;
+ const announceChange=()=>{godModeDirty=true;window.dispatchEvent(new CustomEvent('shacal-godmode-change',{detail:{dirty:true}}));};
+ const saveGodMode=()=>{try{localStorage.setItem(key,JSON.stringify(state));godModeDirty=false;window.dispatchEvent(new CustomEvent('shacal-godmode-saved',{detail:{dirty:false}}));return true;}catch{return false;}};
  const root=document.createElement('div');root.id='shacal-aura-test';
  root.innerHTML=`<style>
  #shacal-aura-test{font:13px/1.5 Arial,sans-serif;color:#eef5ff;position:relative;right:auto;bottom:auto;z-index:auto;width:100%;height:100%}
@@ -71,10 +79,13 @@
  <div class="gm-common gm-pane" data-gm-pane="neon">
  <h4>Neon pod postacią</h4>
  <label><input type="checkbox" class="aura-switch" role="switch" data-key="neonEnabled"> Włącz neon</label>
+ <label>Styl <select data-key="neonStyle"><option value="soft">Neon</option><option value="pentagram">Pentagram</option></select></label>
+ <label data-pentagram-options hidden>Wariant pentagramu<select data-key="pentagramStyle"><option value="classic">Klasyczny</option><option value="double">Podwójny krąg</option><option value="arcane">Runiczny</option><option value="ritual">Rytualny</option><option value="static">Statyczny</option></select></label>
  <label>Kolor <input type="color" data-key="color"></label>
  <label><input type="checkbox" data-key="rgb"> RGB · płynna zmiana kolorów</label>
+ <label><input type="checkbox" data-key="rgbMulti"> RGB wielokolorowe · kilka kolorów jednocześnie</label>
  <label>Szybkość RGB <output data-value="rgbSpeed"></output><input type="range" min="0.2" max="3" step="0.1" data-key="rgbSpeed"></label>
- <button type="button" data-disco="disco" aria-pressed="false">Disco</button>
+  <button type="button" data-disco="disco" aria-pressed="false">Polo</button>
  <label>Rozmiar <output data-value="size"></output><input type="range" min="0.5" max="2" step="0.05" data-key="size"></label>
  <label>Intensywność <output data-value="opacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="opacity"></label>
  </div><div class="gm-pane" data-gm-pane="aura"><h4>Poświata wokół sylwetki</h4>
@@ -82,8 +93,9 @@
  <label>Styl <select data-key="haloStyle"><option value="soft">Miękka poświata</option><option value="smoke">Dym</option><option value="fire">Ogień</option><option value="chakra">Chakra</option></select></label>
  <label>Kolor <input type="color" data-key="haloColor"></label>
  <label><input type="checkbox" data-key="haloRgb"> RGB · płynna zmiana kolorów</label>
+ <label><input type="checkbox" data-key="haloRgbMulti"> RGB wielokolorowe · kilka kolorów jednocześnie</label>
  <label>Szybkość RGB <output data-value="haloRgbSpeed"></output><input type="range" min="0.2" max="3" step="0.1" data-key="haloRgbSpeed"></label>
- <button type="button" data-disco="haloDisco" aria-pressed="false">Polo</button>
+  <button type="button" data-disco="haloDisco" aria-pressed="false">Disco</button>
  <label>Rozmiar <output data-value="haloSize"></output><input type="range" min="0.5" max="2" step="0.05" data-key="haloSize"></label>
  <label>Intensywność <output data-value="haloOpacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="haloOpacity"></label>
  <label>Tempo <output data-value="speed"></output><input type="range" min="0" max="2" step="0.1" data-key="speed"></label>
@@ -92,6 +104,8 @@
  <label>Rodzaj śladów <select data-key="trailShape"><option value="foot">Stopy</option><option value="cat">Kocie łapki</option><option value="bear">Niedźwiedzie łapy</option><option value="duck">Kacze łapki</option><option value="dog">Psie łapy</option></select></label>
  <label>Kolor <input type="color" data-key="trailColor"></label>
  <label><input type="checkbox" data-key="trailRgb"> RGB</label>
+ <label><input type="checkbox" data-key="trailRgbMulti"> RGB wielokolorowe</label>
+ <label><input type="checkbox" data-key="trailRgbMulti"> RGB wielokolorowe</label>
  <label>Zanikanie (sekundy) <output data-value="trailLife"></output><input type="range" min="1" max="8" step="0.5" data-key="trailLife"></label>
  <label>Rozmiar <output data-value="trailSize"></output><input type="range" min="0.5" max="2" step="0.1" data-key="trailSize"></label>
  <label>Intensywność <output data-value="trailOpacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="trailOpacity"></label>
@@ -114,12 +128,14 @@
   const token=++playToken;playing=true;musicButton.textContent='STOP';
   try{await music.play();}catch{if(token===playToken){stopMusic();status.textContent='Odtwarzanie zablokowane. Spróbuj ponownie.';}}
  };
- const syncColorControls=()=>{
+  const syncColorControls=()=>{
   musicButton.disabled=!canPlay();
   if(!canPlay()&&playing)stopMusic();
   root.querySelector('[data-key="color"]').disabled=state.rgb;
   root.querySelector('[data-key="haloColor"]').disabled=state.haloRgb;
-  root.querySelector('[data-key="trailColor"]').disabled=state.trailRgb;
+   root.querySelector('[data-key="trailColor"]').disabled=state.trailRgb;
+   const pentagramOptions=root.querySelector('[data-pentagram-options]');
+   if(pentagramOptions)pentagramOptions.hidden=state.neonStyle!=='pentagram';
   if(!state.trail||!state.enabled){footprints=[];lastStep=null;}
   for(const [mode,rgb,speed] of [['disco','rgb','rgbSpeed'],['haloDisco','haloRgb','haloRgbSpeed']]){
    root.querySelector(`[data-disco="${mode}"]`).setAttribute('aria-pressed',String(state[mode]&&state[rgb]));
@@ -129,7 +145,7 @@
  for(const input of root.querySelectorAll('[data-key]')){
   const k=input.dataset.key;if(input.type==='checkbox')input.checked=state[k];else input.value=state[k];
   const output=root.querySelector(`[data-value="${k}"]`);if(output)output.textContent=state[k];
-  input.oninput=()=>{state[k]=input.type==='checkbox'?input.checked:(input.type==='color'||input.tagName==='SELECT')?input.value:Number(input.value);if(output)output.textContent=state[k];syncColorControls();try{localStorage.setItem(key,JSON.stringify(state));}catch{status.textContent='Brak możliwości zapisania ustawień.';}};
+  input.oninput=()=>{state[k]=input.type==='checkbox'?input.checked:(input.type==='color'||input.tagName==='SELECT')?input.value:Number(input.value);if(k==='rgbMulti'&&state.rgbMulti){state.rgb=true;root.querySelector('[data-key="rgb"]').checked=true;}if(k==='haloRgbMulti'&&state.haloRgbMulti){state.haloRgb=true;root.querySelector('[data-key="haloRgb"]').checked=true;}if(k==='trailRgbMulti'&&state.trailRgbMulti){state.trailRgb=true;root.querySelector('[data-key="trailRgb"]').checked=true;}if(output)output.textContent=state[k];syncColorControls();announceChange();};
  }
  syncColorControls();
  for(const discoButton of root.querySelectorAll('[data-disco]'))discoButton.onclick=()=>{
@@ -137,7 +153,7 @@
   state[mode]=!(state[mode]&&state[rgb]);
   if(state[mode]){state[rgb]=true;root.querySelector(`[data-key="${rgb}"]`).checked=true;}
   syncColorControls();
-  try{localStorage.setItem(key,JSON.stringify(state));}catch{status.textContent='Brak możliwości zapisania ustawień.';}
+  announceChange();
  };
  function drawFootprints(g,hero){
   if(!state.trail){footprints=[];lastStep=null;return;}
@@ -164,7 +180,7 @@
     for(let i=1;i<footprints.length;i++){
      const prev=footprints[i-1],step=footprints[i];
      const fade=Math.pow(Math.max(0,1-(now-prev.time)/state.trailLife),1.5);
-     const tint=state.trailRgb?`hsl(${(step.time*100)%360},100%,65%)`:state.trailColor;
+      const tint=state.trailRgb?`hsl(${(step.time*100+(state.trailRgbMulti?i*48:0))%360},100%,65%)`:state.trailColor;
      g.beginPath();g.moveTo((prev.cx-rx)*32,(prev.cy-ry)*32);g.lineTo((step.cx-rx)*32,(step.cy-ry)*32);
      g.strokeStyle=tint;g.shadowColor=tint;g.shadowBlur=3;g.lineWidth=6*state.trailSize;g.globalAlpha=state.trailOpacity*fade*.45;g.stroke();
      g.shadowBlur=0;g.lineWidth=1.3*state.trailSize;g.strokeStyle='#d8fff1';g.globalAlpha=state.trailOpacity*fade*.35;g.stroke();
@@ -172,10 +188,11 @@
    }finally{g.restore();}
    return;
   }
-  for(const step of footprints){
+  for(let footprintIndex=0;footprintIndex<footprints.length;footprintIndex++){
+   const step=footprints[footprintIndex];
    g.save();try{
     g.translate((step.x-rx)*32,(step.y-ry)*32);g.rotate(step.angle);g.scale(state.trailSize,state.trailSize);
-    const color=state.trailRgb?`hsl(${(step.time*100)%360},100%,65%)`:state.trailColor;
+    const color=state.trailRgb?`hsl(${(step.time*100+(state.trailRgbMulti?footprintIndex*48:0))%360},100%,65%)`:state.trailColor;
     g.globalAlpha=state.trailOpacity*Math.pow(Math.max(0,1-(now-step.time)/state.trailLife),1.5)*clamp(hero.warShadowOpacity,0,1,1);
     g.fillStyle=color;g.shadowColor=color;g.shadowBlur=state.trailShape==='foot'?4:2;
     const pad=(x,y,rx,ry,angle=0)=>{g.beginPath();g.ellipse(x,y,rx,ry,angle,0,Math.PI*2);g.fill();};
@@ -209,7 +226,7 @@
   // on every draw call, otherwise the canvas is cleared between throttled paints
   // and the footprints visibly blink.
   if(!frontOnly&&!state.trail&&lastPaintAt&&paintNow-lastPaintAt<33)return;
-  const x=hero.getCharacterLeft()+hero.fw/2,y=hero.getCharacterTop()+hero.fh-3;
+  const x=hero.getCharacterLeft()+hero.fw/2,y=hero.getCharacterTop()+hero.fh-9;
   if(!Number.isFinite(x)||!Number.isFinite(y))return;
   if(!frontOnly){
    const moved=Math.abs(x-lastPaintX)+Math.abs(y-lastPaintY)>0.1;
@@ -218,16 +235,17 @@
   }
   const seconds=performance.now()/1000;
   const t=seconds*state.speed, pulse=state.speed? .9+.1*Math.sin(t*2.4):1;
-  const color=(opacity,halo)=>{
+  const color=(opacity,halo,phase=0)=>{
    const rgb=halo?state.haloRgb:state.rgb,disco=halo?state.haloDisco:state.disco,speed=disco?20:(halo?state.haloRgbSpeed:state.rgbSpeed);
-   return rgb?`hsla(${(seconds*36*speed)%360},100%,62%,${opacity})`:(halo?state.haloColor:state.color)+Math.round(opacity*255).toString(16).padStart(2,'0');
+   const multi=halo?state.haloRgbMulti:state.rgbMulti;
+   return rgb?`hsla(${(seconds*36*speed+(multi?phase:0))%360},100%,62%,${opacity})`:(halo?state.haloColor:state.color)+Math.round(opacity*255).toString(16).padStart(2,'0');
   };
   const alpha=clamp(hero.warShadowOpacity,0,1,1);
   g.save();
   try{
    g.translate(x,y);g.globalAlpha=alpha;g.globalCompositeOperation='source-over';
    if(!frontOnly)drawFootprints(g,hero);
-   const fill=(cy,rx,ry,strength,halo=false,cx=0)=>{g.save();try{g.translate(cx,cy);g.scale(rx,ry);const gradient=g.createRadialGradient(0,0,0,0,0,1);gradient.addColorStop(0,color(1,halo));gradient.addColorStop(.45,color(.6,halo));gradient.addColorStop(1,color(0,halo));g.fillStyle=gradient;g.globalAlpha=alpha*strength;g.beginPath();g.arc(0,0,1,0,Math.PI*2);g.fill();}finally{g.restore();}};
+   const fill=(cy,rx,ry,strength,halo=false,cx=0,phase=0)=>{g.save();try{g.translate(cx,cy);g.scale(rx,ry);const gradient=g.createRadialGradient(0,0,0,0,0,1);gradient.addColorStop(0,color(1,halo,phase));gradient.addColorStop(.45,color(.6,halo,phase+90));gradient.addColorStop(1,color(0,halo,phase+180));g.fillStyle=gradient;g.globalAlpha=alpha*strength;g.beginPath();g.arc(0,0,1,0,Math.PI*2);g.fill();}finally{g.restore();}};
    function chakra(front){
     const scale=hero.fh*state.haloSize/165;
     g.save();try{
@@ -238,7 +256,7 @@
       const fade=Math.pow(Math.sin(v*Math.PI),.7);
       const radius=40-27*v;
       g.beginPath();g.ellipse(Math.cos(a)*radius,-v*165,5*fade+.2,9*fade+.2,-Math.cos(a)*.55,0,Math.PI*2);
-      g.fillStyle=color(1,true);g.globalAlpha=alpha*state.haloOpacity*fade*.085;g.shadowColor=color(1,true);g.shadowBlur=8*scale;g.fill();
+       const chakraColor=color(1,true,k*120+i*4);g.fillStyle=chakraColor;g.globalAlpha=alpha*state.haloOpacity*fade*.085;g.shadowColor=chakraColor;g.shadowBlur=8*scale;g.fill();
      }
     }finally{g.restore();}
    }
@@ -247,7 +265,40 @@
    const effect=halo=>{
     const style=halo?state.haloStyle:state.style,size=halo?state.haloSize:state.size,opacity=halo?state.haloOpacity:state.opacity;
     const height=halo?hero.fh*size:17*size,width=23*size;
-    if(style==='soft'){
+   if(!halo&&state.neonStyle==='pentagram'){
+    const scale=hero.fh*size/165,style=state.pentagramStyle;
+    g.save();try{
+     g.translate(0,3);g.scale(scale,scale);g.scale(1,.58);
+     if(style!=='static')g.rotate(t*.55);
+     const strokeCircle=(radius,alphaValue,width,blur,phase=0)=>{g.save();g.globalAlpha=alpha*opacity*alphaValue;g.strokeStyle=color(1,false,phase);g.shadowColor=color(1,false,phase);g.shadowBlur=blur;g.lineWidth=width;g.beginPath();g.arc(0,0,radius,0,Math.PI*2);g.stroke();g.restore();};
+     const strokeStar=(radius,alphaValue,width,blur,phase=0)=>{g.save();g.globalAlpha=alpha*opacity*alphaValue;g.strokeStyle=color(1,false,phase);g.shadowColor=color(1,false,phase);g.shadowBlur=blur;g.lineWidth=width;g.lineCap='round';g.lineJoin='round';g.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?.4:1,x=Math.cos(a)*radius*r,y=Math.sin(a)*radius*r;i?g.lineTo(x,y):g.moveTo(x,y);}g.closePath();g.stroke();g.restore();};
+     const segmentedRing=(radius,alphaValue,width,blur,count,gap,phase=0)=>{g.save();g.globalAlpha=alpha*opacity*alphaValue;g.strokeStyle=color(1,false,phase);g.shadowColor=color(1,false,phase);g.shadowBlur=blur;g.lineWidth=width;g.lineCap='round';for(let i=0;i<count;i++){const start=i*Math.PI*2/count+gap,end=(i+1)*Math.PI*2/count-gap;g.beginPath();g.arc(0,0,radius,start,end);g.stroke();}g.restore();};
+     const radialMarks=(radius,count,length,alphaValue,width,blur,phase=0)=>{g.save();g.globalAlpha=alpha*opacity*alphaValue;g.strokeStyle=color(1,false,phase);g.shadowColor=color(1,false,phase);g.shadowBlur=blur;g.lineWidth=width;g.lineCap='round';for(let i=0;i<count;i++){const a=i*Math.PI*2/count,x1=Math.cos(a)*radius,y1=Math.sin(a)*radius,x2=Math.cos(a)*(radius+length),y2=Math.sin(a)*(radius+length);g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();}g.restore();};
+     if(style==='double'){
+      strokeCircle(41,.2,8,18,0);strokeCircle(38,.9,2.6,9,50);strokeCircle(29,.48,1.4,6,100);strokeStar(34.7,.95,2.2,8,155);strokeStar(30.5,.34,1.2,5,205);radialMarks(38,10,2.5,.48,1.3,5,255);
+     }else if(style==='arcane'){
+      segmentedRing(40,.75,3.2,10,12,.13,0);strokeCircle(35.8,.65,1.1,5,80);strokeStar(34.7,.95,2.1,8,145);
+      for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5;g.save();g.translate(Math.cos(a)*35.8,Math.sin(a)*35.8);g.globalAlpha=alpha*opacity*.82;g.fillStyle=color(1,false,210+i*45);g.shadowColor=g.fillStyle;g.shadowBlur=7;g.beginPath();g.arc(0,0,2.3,0,Math.PI*2);g.fill();g.restore();}
+     }else if(style==='ritual'){
+      strokeCircle(41,.18,8,18,0);strokeCircle(38,.78,2.2,8,55);strokeCircle(24,.42,1.1,5,110);strokeStar(34.7,.95,2.1,8,165);radialMarks(37,8,4,.7,1.5,6,220);radialMarks(24,5,2.4,.45,1,4,275);
+     }else{
+      strokeCircle(38,.34,8,18,0);strokeCircle(37,.9,2.4,8,55);strokeCircle(34,.8,1.25,5,110);strokeStar(33.2,.28,4.2,8,165);strokeStar(34.7,.95,2.1,8,220);radialMarks(34,16,0,.6,1.6,6,275);
+     }
+    }finally{g.restore();}
+    return;
+   }
+   if(halo&&style==='petals'){
+    const scale=hero.fh*size/165;g.save();try{g.scale(scale,scale);
+     for(let i=0;i<22;i++){
+      const life=(t*.16+i*.173)%1,drift=Math.sin(t*.9+i*1.7)*18+Math.sin(t*.43+i)*7;
+      const px=(i%2?-1:1)*(22+(i%5)*9)+drift,py=-hero.fh/scale*.86+life*(hero.fh/scale*1.12),rot=Math.sin(t*.7+i)*.8;
+       const fade=Math.sin(life*Math.PI),petal=state.haloRgb?color(1,true,i*48):(i%3===0?'#ffd8e7':i%3===1?'#ff9ec1':'#f277a8');
+      g.save();g.translate(px,py);g.rotate(rot);g.globalAlpha=alpha*opacity*fade*.8;g.fillStyle=petal;g.shadowColor=petal;g.shadowBlur=7;
+      g.beginPath();g.moveTo(0,-5);g.bezierCurveTo(5,-3,5,3,0,5);g.bezierCurveTo(-5,3,-5,-3,0,-5);g.fill();g.restore();
+     }
+    }finally{g.restore();}return;
+   }
+   if(style==='soft'){
      if(halo)fill(-hero.fh*.36,22*size*pulse,hero.fh*.67*size,.42*opacity,true);
      else fill(0,25*size*pulse,10*size,.8*opacity);
      return;
@@ -256,7 +307,7 @@
      for(let i=0;i<10;i++){
       const life=(t*.23+i*.618)%1,spread=(.35+life*.6)*width;
       const cx=Math.sin(i*2.4+t*.7+life*2)*spread;
-      fill(-life*height, size*(7+life*9),size*(halo?10+life*10:4+life*5),opacity*.24*Math.sin(life*Math.PI),halo,cx);
+       fill(-life*height, size*(7+life*9),size*(halo?10+life*10:4+life*5),opacity*.24*Math.sin(life*Math.PI),halo,cx,i*48);
      }
     }else if(style==='fire'){
      g.save();
@@ -271,7 +322,8 @@
         left.push([x-radius,y]);right.push([x+radius,y]);
        }
        const gradient=g.createLinearGradient(0,0,0,-h);
-       gradient.addColorStop(0,color(layer===2?.65:.35,true));gradient.addColorStop(.4,color(layer===2?.7:.45,true));gradient.addColorStop(.8,color(.16,true));gradient.addColorStop(1,color(0,true));
+       const phase=(i*52+layer*35)%360;
+       gradient.addColorStop(0,color(layer===2?.65:.35,true,phase));gradient.addColorStop(.4,color(layer===2?.7:.45,true,phase+75));gradient.addColorStop(.8,color(.16,true,phase+150));gradient.addColorStop(1,color(0,true,phase+220));
        g.fillStyle=gradient;g.globalAlpha=alpha*opacity;g.filter=`blur(${(layer===0?5:layer===1?2:1)*scale}px)`;
        g.beginPath();left.forEach(([x,y],j)=>j?g.lineTo(x,y):g.moveTo(x,y));right.reverse().forEach(([x,y])=>g.lineTo(x,y));g.closePath();g.fill();
       }
@@ -312,6 +364,7 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.3.4',diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,footprints:footprints.length,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.3.6',save:saveGodMode,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
 })();
+
 

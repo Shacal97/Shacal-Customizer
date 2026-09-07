@@ -1,9 +1,9 @@
-/* Shacal core 6.4.4 */
+/* Shacal core 6.4.5 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.4.4';
+ctx.SHACAL_SCRIPT_VERSION = '6.4.5';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -3226,7 +3226,8 @@ declare(ctx){
     };
     ctx.addonSettingKeys=keys;
     const failed=new Set();
-    const changed=id=>failed.has(id)||keys[id].some(k=>JSON.stringify(ctx.panelDraftSettings[k])!==JSON.stringify(ctx.settings[k]));
+    ctx.godModeDirty=false;
+    const changed=id=>failed.has(id)||(id==='godmode'&&ctx.godModeDirty===true)||keys[id].some(k=>JSON.stringify(ctx.panelDraftSettings[k])!==JSON.stringify(ctx.settings[k]));
     ctx.refreshAddonSaveState=panel=>{
         if(!panel||!ctx.panelDraftSettings)return;
         for(const id of Object.keys(keys)){
@@ -3245,6 +3246,7 @@ declare(ctx){
         for(const key of keys[id])ctx.panelDraftSettings[key]=draft[key];
         let saved=false;
         try{saved=ctx.commitPanelDraftSettings(panel);}finally{ctx.panelDraftSettings=draft;}
+        if(saved&&id==='godmode'&&typeof window.ShacalAuraTest?.save==='function')saved=window.ShacalAuraTest.save();
         if(saved){failed.delete(id);for(const key of keys[id])ctx.panelDraftSettings[key]=ctx.settings[key];}
         else failed.add(id);
         ctx.refreshAddonSaveState(panel);
@@ -3271,6 +3273,8 @@ declare(ctx){
         const slider=panel.querySelector('#sg-panelTransparency');
         slider?.addEventListener('change',()=>{ctx.settings.panelTransparency=Number(slider.value);const ok=ctx.saveSettings();if(hint)hint.textContent=ok?'Przezroczystość panelu zapisana.':'Nie udało się zapisać przezroczystości.';ctx.refreshAddonSaveState(panel);});
         ctx.refreshAddonSaveState(panel);
+        window.addEventListener('shacal-godmode-change',()=>{ctx.godModeDirty=true;ctx.refreshAddonSaveState(panel);});
+        window.addEventListener('shacal-godmode-saved',()=>{ctx.godModeDirty=false;ctx.refreshAddonSaveState(panel);});
         const style=document.createElement('style');style.textContent=`
 #shacal-glow-panel .panel-tabs{display:none!important}
 #shacal-glow-panel .header{height:110px!important;background:radial-gradient(ellipse at 20% 0,#11373e66,transparent 65%),#06090e!important}
@@ -3310,3 +3314,4 @@ declare(ctx){
 `;document.head.append(style);
     };
 },init(){}});
+

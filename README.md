@@ -1,4 +1,4 @@
-# Shacal — Panel dodatków v6.4.4
+# Shacal — Panel dodatków v6.4.5
 
 **Instalacja całego dodatku:** [zainstaluj lub zaktualizuj Shacal Customizer w Tampermonkey](https://shacal97.github.io/Shacal-Customizer/install.user.js)
 
@@ -8,7 +8,7 @@ W Notyficatorze wybierz styl obramowania **Energia** i zapisz ustawienia dodatku
 
 Tempo 0 zatrzymuje ruch Energii. Przy tempie większym od 0 ramka porusza się także z efektem „Brak” i przy systemowym ograniczeniu animacji. Dodatkowe efekty sterują pulsowaniem, migotaniem i kolorami. Rysowanie korzysta z osobnego zegara, niezależnego od requestAnimationFrame gry. Potwierdzenie TESTU natychmiast usuwa jego ramkę. Zamknięcie łupu usuwa efekt; na ukrytej karcie rysowanie jest wstrzymane. Nie ma dodatkowych ramek wokół pojedynczych przedmiotów w tym stylu.
 
-Mały instalator Tampermonkey pobiera panel i pięć osobnych, wykonywalnych skryptów. Nie pobiera fragmentów tekstu do sklejenia w jeden skrypt i nie używa eval do uruchamiania dodatków.
+Mały instalator Tampermonkey pobiera panel i sześć osobnych, wykonywalnych skryptów. Nie pobiera fragmentów tekstu do sklejenia w jeden skrypt i nie używa eval do uruchamiania dodatków.
 
 ## Pliki
 
@@ -21,6 +21,7 @@ Mały instalator Tampermonkey pobiera panel i pięć osobnych, wykonywalnych skr
 - `addons/czat.js`: ogłoszenia legend, emotikony oraz transport wiadomości współdzielony z wołaczem.
 - `addons/wolacz.js`: powiadomienia o potworach.
 - `addons/przelogowanie.js`: liczniki E2 i podświetlenie postaci.
+- `addons/god-mode.js`: aura, neon/pentagram i neonowe ślady.
 - `assets/`: 30 plików MP3 i 10 grafik PNG.
 
 Skrypty rejestrują funkcje oraz inicjalizację w `ShacalRuntime`. Funkcje współpracują przez wspólny kontekst `ctx`, zamiast polegać na zmiennych z jednego sklejonego pliku. Cały zestaw kodu pobierany jest przy uruchomieniu, ponieważ dodatki współdzielą infrastrukturę. Przełączniki decydują o działaniu funkcji; nie oznaczają usunięcia ich kodu z pamięci. Wspólne obserwatory nadal pracują. Nagrania są pobierane przez przeglądarkę przy użyciu, a nie jako Base64 w instalatorze.
@@ -30,7 +31,7 @@ Skrypty rejestrują funkcje oraz inicjalizację w `ShacalRuntime`. Funkcje wspó
 1. Rozpakuj paczkę ZIP na komputerze.
 2. Otwórz repozytorium `Shacal97/Shacal-Customizer` i zakładkę Code.
 3. Wybierz Add file → Upload files.
-4. Przeciągnij **zawartość** rozpakowanego folderu, razem z katalogami `addons` i `assets`. Nie wgrywaj samego ZIP-a ani nadrzędnego folderu `Shacal_Repo_v6.4.4`.
+4. Przeciągnij **zawartość** rozpakowanego folderu, razem z katalogami `addons` i `assets`. Nie wgrywaj samego ZIP-a ani nadrzędnego folderu `Shacal_Repo_v6.4.5`.
 5. Zapisz pliki przez Commit changes. Jeśli istnieją pliki o tych samych nazwach, sprawdź zmianę przed zatwierdzeniem. Stary `Shacal_Customizer.user.js` nie musi być usuwany.
 6. W Settings → Pages wybierz Source: Deploy from a branch, Branch: main, folder: /(root), następnie Save. Jeśli repozytorium używa innej gałęzi, wybierz tę, do której wgrałeś pliki.
 7. Poczekaj na zakończenie publikacji Pages. Najpierw sprawdź adres manifestu, potem instalatora.
@@ -60,7 +61,7 @@ Sprawdzono lokalne pobieranie przez przeglądarkę z symulowanymi odpowiedziami 
 
 Własne logo Shacal Customizer, usunięta górna lista dodatków, nawigacja przez kafelki i przycisk powrotu. Każdy kafelek ma oddzielny zapis oraz znacznik niezapisanych zmian. Przyciski zapisu są też wewnątrz ustawień. Zapis jednego dodatku nie zapisuje szkiców pozostałych. Ramki i dymki mają wspólny zapis. Przezroczystość jest preferencją panelu i zapisuje się oddzielnie po zakończeniu zmiany suwaka.
 
-Po wgraniu całej zawartości tej wersji i zakończeniu publikacji Pages zaktualizuj instalator z tego samego adresu install.user.js do v6.4.4. Nie trzeba zmieniać adresów.
+Po wgraniu całej zawartości tej wersji i zakończeniu publikacji Pages zaktualizuj instalator z tego samego adresu install.user.js do v6.4.5. Nie trzeba zmieniać adresów.
 
 29 testów lokalnych przeszło: izolacja zapisu, obsługa błędu zapisu, panel mobilny, E2, warstwy ulepszeń i awarie pobierania. Nie wykonano testu nowego panelu w rzeczywistej sesji gry.
 
@@ -71,3 +72,13 @@ Przy korekcie czasów wybranej E2 dopasowanie jest przywracane po jej identyfika
 ## God Mode
 
 God Mode jest ładowany jako osobny moduł i udostępnia ustawienia aury, neonu oraz śladów. Ustawienia zapisują się lokalnie w shacalAuraTestV1.
+
+
+## Nowości v6.4.5
+
+God Mode ma teraz wybór stylu **Neon / Pentagram**. Pentagram udostępnia warianty Klasyczny, Podwójny krąg, Runiczny, Rytualny i Statyczny. Dla neonu, pentagramu oraz poświaty można włączyć RGB wielokolorowe, dzięki któremu kilka odcieni jest widocznych jednocześnie. Płatki wiśni również obsługują RGB i zachowują osobne ustawienia od pentagramu.
+
+
+
+
+
