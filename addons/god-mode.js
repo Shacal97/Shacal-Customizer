@@ -40,7 +40,7 @@
  let binding=null,disposed=false,lastError='',draws=0,lastPaintAt=0,lastPaintX=NaN,lastPaintY=NaN;
  const root=document.createElement('div');root.id='shacal-aura-test';
  root.innerHTML=`<style>
- #shacal-aura-test{font:13px/1.5 Arial,sans-serif;color:#eef5ff;position:fixed;right:18px;bottom:90px;z-index:2000000}
+ #shacal-aura-test{font:13px/1.5 Arial,sans-serif;color:#eef5ff;position:relative;right:auto;bottom:auto;z-index:auto;width:100%}
  #shacal-aura-test *{box-sizing:border-box}
  #shacal-aura-test button{color:#9affed;background:linear-gradient(#214c49,#132521);border:1px solid #35d9c5;border-radius:7px;padding:9px 15px;cursor:pointer;font:600 12px Arial,sans-serif}
  #shacal-aura-test button[data-disco]{padding:6px 10px;font-size:11px;border-color:#9762b3;color:#ebc6ff;background:#25192e}
@@ -96,7 +96,8 @@
  <label>Rozmiar <output data-value="trailSize"></output><input type="range" min="0.5" max="2" step="0.1" data-key="trailSize"></label>
  <label>Intensywność <output data-value="trailOpacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="trailOpacity"></label>
  <small data-status>Oczekiwanie na postać…</small><small>Ustawienia zapisują się od razu.</small><button type="button" data-music disabled style="width:100%;margin-top:14px">START</button></section><button type="button" aria-expanded="false">AURA</button>`;
- document.body.append(root);
+ const godHost=document.getElementById('shacal-godmode-host');(godHost||document.body).append(root);
+ if(!godHost){const mover=setInterval(()=>{const host=document.getElementById('shacal-godmode-host');if(host){host.append(root);clearInterval(mover);}},1000);}
  const panel=root.querySelector('section'),button=root.querySelector('button[aria-expanded]'),status=root.querySelector('[data-status]');
  const gmPanes=[...root.querySelectorAll('[data-gm-pane]')];
  const selectGmTab=tab=>{for(const pane of gmPanes)pane.hidden=pane.dataset.gmPane!==tab;for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.setAttribute('aria-selected',String(tabButton.dataset.gmTab===tab));};

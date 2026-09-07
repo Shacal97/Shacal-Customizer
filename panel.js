@@ -1,16 +1,16 @@
-/* Shacal core 6.4.0 */
+/* Shacal core 6.4.1 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.4.0';
+ctx.SHACAL_SCRIPT_VERSION = '6.4.1';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
         noticeHeros: true, noticeKolos: false, noticeTytan: false, heroCallMode: 'auto', heroNoticeChannel: 'GLOBAL', heroNoticesEnabled: false, heroNoticeTemplate: 'Znaleziono: {POTWOR}, {MAPA} ({KOORDY})',
         lootSoundEnabled: true,
         panelTransparency: 0,
-        enabled: true, color1: '#63f59a', color2: '#d8b800', color3: '#e12b77', glow1: 3, glow2: 3, glow3: 2, opacity1: 4, opacity2: 4, opacity3: 3, width1: 2, width2: 3,
+        enabled: true, godModeEnabled: true, color1: '#63f59a', color2: '#d8b800', color3: '#e12b77', glow1: 3, glow2: 3, glow3: 2, opacity1: 4, opacity2: 4, opacity3: 3, width1: 2, width2: 3,
         width3: 4, pulse: 3, effect: 1, glowStyle: 1, sound: 1, volume: 3, dropMode: 'normal', itemFramesEnabled: false, overrideGameItemFrames: true, itemFrameSet: 1,
         frameCommon: true, frameUnique: true, frameHeroic: true, frameUpgraded: true, frameLegendary: true, upgradeBadgeEnabled: false, upgradeBadgeStyle: 1,
         upgradeBadgeSyncRarityColor: true, itemTipsEnabled: false, itemTipSet: 0, // 0 = synchronizuj z wybranym zestawem ramek
@@ -40,7 +40,7 @@ runtime.registerPart("addon-registry.js", {declare(ctx){ctx.addonFeatureEnabled 
         {id:'chat',name:'Custom Chat',description:'Ogłoszenia legend i emotikony na czacie.',features:['chatAnnouncementsEnabled','chatEmoticonsEnabled']},
         {id:'detector',name:'Wołajka!',description:'Dodatek umożliwiający automatyczne powiadomienie o herosie/tytanie/kolosie na czacie globalnym lub klanowym.',features:['heroNoticesEnabled']},
         {id:'e2',name:'Relog Timer',description:'Dodatek synchronizujący minutnik z panelem przelogowania z opcją podświetlenia postaci przy respie e2.',features:['e2ReloggerEnabled']}
-        ,{id:'godmode',name:'God Mode',description:'Customizacja efektów wizualnych wokół postaci.',features:[]}
+        ,{id:'godmode',name:'God Mode',description:'Customizacja efektów wizualnych wokół postaci.',features:['godModeEnabled']}
     ];
 ctx.SHACAL_FEATURE_OWNER = Object.fromEntries(ctx.SHACAL_ADDONS.flatMap(a=>a.features.map(f=>[f,a.id])));}});
 runtime.registerPart("core/settings.js", {declare(ctx){ctx.hasSavedLauncherPosition = function hasSavedLauncherPosition() {
@@ -1599,6 +1599,8 @@ runtime.registerPart("core/panel-settings.js", {declare(ctx){ctx.assemblePanelWo
         const e2=document.createElement('div');e2.id='sg-tab-e2-content';e2.className='body tab-content';
         e2.innerHTML='<label style="display:block;margin:12px 0"><input id="sg-e2-enabled" type="checkbox"> Włącz podświetlanie E2</label><p>Kolor Mini oznacza początek przedziału respawnu. Gdy Max dojdzie do zera, postać przyjmie kolor Max. Dymki z odliczaniem możesz wyłączyć. Poświatą steruje tylko pierwsza wykryta E2, oznaczona w dymku kropką. Dymek pokazuje wszystkie aktywne liczniki postaci. Jeśli przy pierwszym uruchomieniu ma już kilka liczników, dodatek czeka na nowe, pojedyncze zabicie. To czas z minutnika, a nie potwierdzenie pojawienia się potwora.</p><label style="display:block;margin:18px 0"><input id="sg-e2-selected" type="checkbox"> Tylko wybrane postacie</label><div id="sg-e2-characters"></div><label style="display:block;margin:18px 0"><input id="sg-e2-tooltips" type="checkbox"> Pokaż dymki E2 po najechaniu</label><div style="display:flex;gap:24px;margin:18px 0"><label>Kolor Mini <input id="sg-e2-mini-color" type="color"></label><label>Kolor Max <input id="sg-e2-max-color" type="color"></label></div><button id="sg-e2-refresh" type="button">ODŚWIEŻ LISTĘ POSTACI</button><p id="sg-e2-status"></p>';
         panel.append(e2);
+        const god=document.createElement('div');god.id='sg-tab-godmode-content';god.className='body tab-content';god.innerHTML='<div id="shacal-godmode-host"></div>';panel.append(god);
+        const godtab=document.createElement('button');godtab.id='sg-tab-godmode';godtab.className='panel-tab';godtab.type='button';godtab.textContent='GOD MODE';panel.querySelector('.panel-tabs').append(godtab);
         const e2tab=document.createElement('button');e2tab.id='sg-tab-e2';e2tab.className='panel-tab';e2tab.type='button';e2tab.textContent='PRZELOGOWANIE';panel.querySelector('.panel-tabs').append(e2tab);
         for(const [id,key] of [['enabled','e2ReloggerEnabled'],['selected','e2SelectedOnly'],['tooltips','e2TooltipsEnabled']]){const el=e2.querySelector('#sg-e2-'+id);el.checked=ctx.panelDraftSettings[key];el.addEventListener('change',()=>{ctx.panelDraftSettings[key]=el.checked;ctx.markPanelDraftDirty(panel);});}
         for(const [id,key] of [['mini','e2MiniColor'],['max','e2MaxColor']]){const input=e2.querySelector('#sg-e2-'+id+'-color');input.value=ctx.panelDraftSettings[key];input.addEventListener('input',()=>{ctx.panelDraftSettings[key]=input.value;ctx.markPanelDraftDirty(panel);});}
@@ -1712,6 +1714,8 @@ ctx.bindPanel = function bindPanel(panel) {
             panel.querySelector('#sg-tab-detector-content').classList.toggle('active',tab==='detector');
             panel.querySelector('#sg-tab-e2').classList.toggle('active',tab==='e2');
             panel.querySelector('#sg-tab-e2-content').classList.toggle('active',tab==='e2');
+            panel.querySelector('#sg-tab-godmode').classList.toggle('active',tab==='godmode');
+            panel.querySelector('#sg-tab-godmode-content').classList.toggle('active',tab==='godmode');
             if(tab==='e2')ctx.refreshE2Characters(panel);
             const labels = {home:['Twoje dodatki','Wybierz dodatek, ustaw jego opcje i zapisz zmiany.']};
             for(const addon of ctx.SHACAL_ADDONS)labels[addon.id]=[addon.name,addon.description];
@@ -1729,6 +1733,7 @@ ctx.bindPanel = function bindPanel(panel) {
         }));
         setPanelTab('home');
         panel.querySelector('#sg-tab-e2').addEventListener('click',()=>setPanelTab('e2'));
+        panel.querySelector('#sg-tab-godmode').addEventListener('click',()=>setPanelTab('godmode'));
         glowTab.addEventListener('click', () => setPanelTab('glow'));
         framesTab.addEventListener('click', () => setPanelTab('frames'));
         tipsTab.addEventListener('click', () => setPanelTab('tips'));
@@ -3253,7 +3258,7 @@ declare(ctx){
         const brand=panel.querySelector('.brand-title');
         if(brand){const img=document.createElement('img');img.className='sg-custom-logo';img.src='https://shacal97.github.io/Shacal-Customizer/assets/shacal-logo-v630.png';img.alt='Shacal Customizer';brand.replaceChildren(img);}
         const back=document.createElement('button');back.className='sg-back-addons';back.type='button';back.textContent='WSTECZ';back.addEventListener('click',()=>panel.querySelector('#sg-tab-home').click());const actions=document.createElement('div');actions.className='sg-footer-actions';actions.append(back);panel.querySelector('.sg-save-footer').append(actions);
-        const icons=['✧','▣','❝','⌖','◷'];
+        const icons=['✧','▣','❝','⌖','◷','✦'];
         panel.querySelectorAll('.sg-addon-card').forEach((card,i)=>{
             const id=card.querySelector('[data-addon-switch]').dataset.addonSwitch;card.dataset.addonCard=id;
             const emblem=document.createElement('span');emblem.className='sg-card-emblem';emblem.textContent=icons[i];emblem.setAttribute('aria-hidden','true');card.prepend(emblem);
