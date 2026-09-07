@@ -1,7 +1,7 @@
 // ==UserScript==
 // God Mode — Customizacja efektów wizualnych wokół postaci.
 // @namespace    shacal.aura.test
-// @version      0.4.0
+// @version      0.4.2
 // @description  Customizacja efektów wizualnych wokół postaci.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
@@ -25,16 +25,20 @@
  state.haloRgbMulti=raw.haloRgbMulti===true;
  state.haloRgbSpeed=clamp(raw.haloRgbSpeed ?? state.rgbSpeed,.2,3,1);
  state.pentagramSpeed=clamp(raw.pentagramSpeed ?? raw.speed,0,2,1);
- state.pentagramSize=clamp(raw.pentagramSize ?? raw.size,0,2,1);
+ state.pentagramSize=clamp(raw.pentagramSize ?? raw.size,0,4,1);
  const styles=['soft','smoke','fire','chakra','petals'];
  state.style='soft';
  state.neonStyle=['soft','pentagram'].includes(raw.neonStyle)?raw.neonStyle:'soft';
  state.pentagramStyle=['classic','double','arcane','ritual','static'].includes(raw.pentagramStyle)?raw.pentagramStyle:'classic';
+ state.neonSelected=typeof raw.neonSelected==='boolean'?raw.neonSelected:state.neonStyle==='soft'&&raw.neonEnabled!==false;
+ state.pentagramSelected=typeof raw.pentagramSelected==='boolean'?raw.pentagramSelected:state.neonStyle==='pentagram'&&raw.neonEnabled!==false;
+ if(state.neonSelected&&state.pentagramSelected)state.pentagramSelected=false;
+ state.neonStyle=state.pentagramSelected?'pentagram':'soft';
  state.haloStyle=styles.includes(raw.haloStyle)?raw.haloStyle:'soft';
  state.disco=raw.disco===true;
  state.haloDisco=raw.haloDisco===true;
  state.trail=raw.trail===true;
- state.neonEnabled=raw.neonEnabled!==false;
+ state.neonEnabled=raw.neonEnabled!==false&&(state.neonSelected||state.pentagramSelected);
  state.trailColor=/^#[0-9a-f]{6}$/i.test(raw.trailColor)?raw.trailColor:'#39e4ff';
  state.trailRgb=raw.trailRgb===true;
  state.trailRgbMulti=raw.trailRgbMulti===true;
@@ -63,6 +67,7 @@
  #shacal-aura-test .gm-party-controls [data-music]{padding:6px 12px}
  #shacal-aura-test section{width:100%;max-width:none;max-height:none;height:100%;overflow-y:auto;padding:10px 20px 20px;margin:0;background:transparent;border:0;border-radius:0;box-shadow:none}
  #shacal-aura-test section[hidden]{display:none}
+ #shacal-aura-test [hidden]{display:none!important}
  #shacal-aura-test h3{display:none}
  #shacal-aura-test h4{margin:16px 0 6px;padding-top:12px;border-top:1px solid #ffffff20;color:#cfa6ee;font-size:12px}
  #shacal-aura-test .gm-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 0 12px}
@@ -84,19 +89,20 @@
  <label><input type="checkbox" data-key="enabled"> Włącz aurę</label>
  <label><input type="checkbox" data-key="overrideNative"> Zastąp poświaty gry</label>
  <nav class="gm-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-gm-tab="aura">Aura</button><button type="button" role="tab" aria-selected="false" data-gm-tab="neon">Neon</button><button type="button" role="tab" aria-selected="false" data-gm-tab="trails">Ślady</button></nav>
- <div class="gm-common gm-pane" data-gm-pane="neon">
- <h4>Neon pod postacią</h4>
- <label><input type="checkbox" class="aura-switch" role="switch" data-key="neonEnabled"> Włącz neon</label>
- <label>Styl <select data-key="neonStyle"><option value="soft">Neon</option><option value="pentagram">Pentagram</option></select></label>
- <label data-pentagram-options hidden>Wariant pentagramu<select data-key="pentagramStyle"><option value="classic">Klasyczny</option><option value="double">Podwójny krąg</option><option value="arcane">Runiczny</option><option value="ritual">Rytualny</option><option value="static">Statyczny</option></select></label>
- <label data-pentagram-options hidden>Prędkość pentagramu <output data-value="pentagramSpeed"></output><input type="range" min="0" max="2" step="0.05" data-key="pentagramSpeed"></label>
- <label data-pentagram-options hidden>Rozmiar pentagramu <output data-value="pentagramSize"></output><input type="range" min="0" max="2" step="0.05" data-key="pentagramSize"></label>
- <label>Kolor <input type="color" data-key="color"></label>
- <label><input type="checkbox" data-key="rgb"> RGB · płynna zmiana kolorów</label>
- <label><input type="checkbox" data-key="rgbMulti"> RGB wielokolorowe · kilka kolorów jednocześnie</label>
- <label>Szybkość RGB <output data-value="rgbSpeed"></output><input type="range" min="0.2" max="3" step="0.1" data-key="rgbSpeed"></label>
- <label data-neon-options>Rozmiar <output data-value="size"></output><input type="range" min="0.5" max="2" step="0.05" data-key="size"></label>
- <label data-neon-options>Intensywność <output data-value="opacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="opacity"></label>
+  <div class="gm-common gm-pane" data-gm-pane="neon">
+  <h4>Neon</h4>
+  <label><input type="checkbox" class="aura-switch" role="switch" data-key="neonSelected"> Włącz Neon</label>
+  <label>Kolor <input type="color" data-key="color"></label>
+  <label><input type="checkbox" data-key="rgb"> RGB · płynna zmiana kolorów</label>
+  <label><input type="checkbox" data-key="rgbMulti"> RGB wielokolorowe · kilka kolorów jednocześnie</label>
+  <label>Szybkość RGB <output data-value="rgbSpeed"></output><input type="range" min="0.2" max="3" step="0.1" data-key="rgbSpeed"></label>
+  <label data-neon-options>Rozmiar <output data-value="size"></output><input type="range" min="0.5" max="2" step="0.05" data-key="size"></label>
+  <label data-neon-options>Intensywność <output data-value="opacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="opacity"></label>
+  <h4>Pentagram</h4>
+  <label><input type="checkbox" class="aura-switch" role="switch" data-key="pentagramSelected"> Włącz Pentagram</label>
+  <label data-pentagram-options>Wariant pentagramu<select data-key="pentagramStyle"><option value="classic">Klasyczny</option><option value="double">Podwójny krąg</option><option value="arcane">Runiczny</option><option value="ritual">Rytualny</option><option value="static">Statyczny</option></select></label>
+  <label data-pentagram-options>Prędkość pentagramu <output data-value="pentagramSpeed"></output><input type="range" min="0" max="2" step="0.05" data-key="pentagramSpeed"></label>
+  <label data-pentagram-options>Rozmiar pentagramu <output data-value="pentagramSize"></output><input type="range" min="0" max="4" step="0.05" data-key="pentagramSize"></label>
  </div><div class="gm-pane" data-gm-pane="aura"><h4>Poświata wokół sylwetki</h4>
  <label><input type="checkbox" class="aura-switch" role="switch" data-key="halo"> Włącz poświatę</label>
  <label>Styl <select data-key="haloStyle"><option value="soft">Miękka poświata</option><option value="smoke">Dym</option><option value="fire">Ogień</option><option value="chakra">Chakra</option><option value="petals">Płatki wiśni</option></select></label>
@@ -149,9 +155,12 @@
    trailRgb.checked=state.trailRgb&&!state.trailRgbMulti;trailMulti.checked=state.trailRgbMulti;
    neonRgb.disabled=false;neonMulti.disabled=false;
    haloRgb.disabled=false;haloMulti.disabled=false;
-   trailRgb.disabled=false;trailMulti.disabled=false;
-    for(const pentagramOption of root.querySelectorAll('[data-pentagram-options]'))pentagramOption.hidden=state.neonStyle!=='pentagram';
-    for(const neonOption of root.querySelectorAll('[data-neon-options]'))neonOption.hidden=state.neonStyle==='pentagram';
+    trailRgb.disabled=false;trailMulti.disabled=false;
+    const neonSelector=root.querySelector('[data-key="neonSelected"]'),pentagramSelector=root.querySelector('[data-key="pentagramSelected"]');
+    if(neonSelector)neonSelector.checked=state.neonSelected;
+    if(pentagramSelector)pentagramSelector.checked=state.pentagramSelected;
+    for(const pentagramOption of root.querySelectorAll('[data-pentagram-options]'))pentagramOption.hidden=!state.pentagramSelected;
+    for(const neonOption of root.querySelectorAll('[data-neon-options]'))neonOption.hidden=!state.neonSelected;
   if(!state.trail||!state.enabled){footprints=[];lastStep=null;}
   for(const [mode,rgb,speed] of [['disco','rgb','rgbSpeed'],['haloDisco','haloRgb','haloRgbSpeed']]){
    root.querySelector(`[data-disco="${mode}"]`).setAttribute('aria-pressed',String(state[mode]&&state[rgb]));
@@ -170,8 +179,16 @@
     if(k==='rgbMulti'){state.rgbMulti=input.checked;state.rgb=input.checked;}
     if(k==='haloRgb'){state.haloRgb=input.checked;if(input.checked)state.haloRgbMulti=false;}
     if(k==='haloRgbMulti'){state.haloRgbMulti=input.checked;state.haloRgb=input.checked;}
-    if(k==='trailRgb'){state.trailRgb=input.checked;if(input.checked)state.trailRgbMulti=false;}
-    if(k==='trailRgbMulti'){state.trailRgbMulti=input.checked;state.trailRgb=input.checked;}
+     if(k==='trailRgb'){state.trailRgb=input.checked;if(input.checked)state.trailRgbMulti=false;}
+     if(k==='trailRgbMulti'){state.trailRgbMulti=input.checked;state.trailRgb=input.checked;}
+     if(k==='neonSelected'){
+      if(state.neonSelected){state.pentagramSelected=false;state.neonStyle='soft';state.neonEnabled=true;}
+      else if(!state.pentagramSelected)state.neonEnabled=false;
+     }
+     if(k==='pentagramSelected'){
+      if(state.pentagramSelected){state.neonSelected=false;state.neonStyle='pentagram';state.neonEnabled=true;}
+      else if(!state.neonSelected)state.neonEnabled=false;
+     }
      if(output)output.textContent=formatOutput(k,state[k]);syncColorControls();announceChange();};
  }
  syncColorControls();
@@ -391,8 +408,9 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.4.0',save:saveGodMode,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.4.2',save:saveGodMode,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
 })();
+
 
 
 
