@@ -1,9 +1,9 @@
-/* Shacal core 6.3.7 */
+/* Shacal core 6.4.0 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.3.7';
+ctx.SHACAL_SCRIPT_VERSION = '6.4.0';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -40,6 +40,7 @@ runtime.registerPart("addon-registry.js", {declare(ctx){ctx.addonFeatureEnabled 
         {id:'chat',name:'Custom Chat',description:'Ogłoszenia legend i emotikony na czacie.',features:['chatAnnouncementsEnabled','chatEmoticonsEnabled']},
         {id:'detector',name:'Wołajka!',description:'Dodatek umożliwiający automatyczne powiadomienie o herosie/tytanie/kolosie na czacie globalnym lub klanowym.',features:['heroNoticesEnabled']},
         {id:'e2',name:'Relog Timer',description:'Dodatek synchronizujący minutnik z panelem przelogowania z opcją podświetlenia postaci przy respie e2.',features:['e2ReloggerEnabled']}
+        ,{id:'godmode',name:'God Mode',description:'Customizacja efektów wizualnych wokół postaci.',features:[]}
     ];
 ctx.SHACAL_FEATURE_OWNER = Object.fromEntries(ctx.SHACAL_ADDONS.flatMap(a=>a.features.map(f=>[f,a.id])));}});
 runtime.registerPart("core/settings.js", {declare(ctx){ctx.hasSavedLauncherPosition = function hasSavedLauncherPosition() {
