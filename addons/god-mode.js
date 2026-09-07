@@ -1,7 +1,7 @@
 // ==UserScript==
 // God Mode — Customizacja efektów wizualnych wokół postaci.
 // @namespace    shacal.aura.test
-// @version      0.4.2
+// @version      0.5.0
 // @description  Customizacja efektów wizualnych wokół postaci.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
@@ -50,7 +50,24 @@
  state.trailShape=['foot','cat','bear','duck','dog'].includes(raw.trailShape)?raw.trailShape:'foot';
  state.trailOpacity=clamp(raw.trailOpacity,.1,1,.7);
  let footprints=[],lastStep=null,stepSide=1,trailMap=null,trailMapId=null,trailHero=null;
- state.overrideNative=raw.overrideNative!==false;
+  state.overrideNative=raw.overrideNative!==false;
+  const profileStorageKey='shacalGodModeProfilesV1';
+  const profileFields=['enabled','overrideNative','color','size','opacity','speed','halo','haloSize','haloOpacity','haloColor','haloRgb','haloRgbMulti','haloRgbSpeed','rgb','rgbMulti','rgbSpeed','neonEnabled','neonStyle','neonSelected','pentagramSelected','pentagramStyle','pentagramSpeed','pentagramSize','haloStyle','disco','haloDisco','trail','trailColor','trailRgb','trailRgbMulti','trailLife','trailSize','trailOpacity'];
+  let profiles={};try{const stored=JSON.parse(localStorage.getItem(profileStorageKey)||'{}');if(stored&&typeof stored==='object'&&!Array.isArray(stored))profiles=stored;}catch{}
+  let activeProfileKey=null,activeCharacterName='';
+  const getCharacterInfo=hero=>{
+   if(!hero)return null;
+   const data=hero.d||{};
+   const id=data.id??hero.id??data.charId??hero.charId;
+   const account=data.account??hero.accountId??hero.account??'account';
+   const world=location.hostname.split('.')[0]||'world';
+   const name=String(data.nick??data.name??hero.nick??hero.name??(id!=null?'Postać '+id:'Postać'));
+   if(id==null||id==='')return {key:`${world}:${account}:name:${name}`,name};
+   return {key:`${world}:${account}:${id}`,name};
+  };
+  const profileSnapshot=()=>Object.fromEntries(profileFields.map(field=>[field,state[field]]));
+  const persistProfiles=()=>{try{localStorage.setItem(profileStorageKey,JSON.stringify(profiles));return true;}catch{return false;}};
+  const applyProfile=profile=>{if(!profile||typeof profile!=='object')return false;for(const field of profileFields)if(Object.prototype.hasOwnProperty.call(profile,field))state[field]=profile[field];state.neonStyle=state.pentagramSelected?'pentagram':'soft';state.neonEnabled=state.neonSelected||state.pentagramSelected;return true;};
  let binding=null,disposed=false,lastError='',draws=0,lastPaintAt=0,lastPaintX=NaN,lastPaintY=NaN;
  let godModeDirty=false;
  const announceChange=()=>{godModeDirty=true;window.dispatchEvent(new CustomEvent('shacal-godmode-change',{detail:{dirty:true}}));};
@@ -62,9 +79,15 @@
  #shacal-aura-test button{color:#9affed;background:linear-gradient(#214c49,#132521);border:1px solid #35d9c5;border-radius:7px;padding:9px 15px;cursor:pointer;font:600 12px Arial,sans-serif}
  #shacal-aura-test button[data-disco]{padding:6px 10px;font-size:11px;border-color:#9762b3;color:#ebc6ff;background:#25192e}
  #shacal-aura-test button[data-disco][aria-pressed=true]{background:linear-gradient(110deg,#632875,#175d64);border-color:#ee94ff;color:#fff;box-shadow:0 0 9px #d751e64d}
- #shacal-aura-test .gm-party-controls{display:flex;align-items:center;gap:7px;margin:16px 0 8px;padding:10px 0;border-top:1px solid #ffffff20}
- #shacal-aura-test .gm-party-controls strong{margin-right:auto;color:#cfa6ee;font-size:12px}
- #shacal-aura-test .gm-party-controls [data-music]{padding:6px 12px}
+  #shacal-aura-test .gm-party-controls{display:flex;align-items:center;gap:7px;margin:16px 0 8px;padding:10px 0;border-top:1px solid #ffffff20}
+  #shacal-aura-test .gm-party-controls strong{margin-right:auto;color:#cfa6ee;font-size:12px}
+  #shacal-aura-test .gm-party-controls [data-music]{padding:6px 12px}
+  #shacal-aura-test .gm-profile-bar{margin:6px 0 12px;padding:9px 10px;border:1px solid #ffffff20;border-radius:7px;background:#0b151b80}
+  #shacal-aura-test .gm-profile-bar>strong{display:block;color:#77ebdc;font-size:11px;margin-bottom:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #shacal-aura-test .gm-profile-bar>div{display:flex;gap:6px}
+  #shacal-aura-test .gm-profile-bar button{padding:6px 8px;font-size:10px;flex:1}
+  #shacal-aura-test .gm-profile-bar button:disabled{opacity:.45;cursor:not-allowed}
+  #shacal-aura-test .gm-profile-bar small{margin-top:6px;font-size:10px;white-space:normal}
  #shacal-aura-test section{width:100%;max-width:none;max-height:none;height:100%;overflow-y:auto;padding:10px 20px 20px;margin:0;background:transparent;border:0;border-radius:0;box-shadow:none}
  #shacal-aura-test section[hidden]{display:none}
  #shacal-aura-test [hidden]{display:none!important}
@@ -85,10 +108,11 @@
  #shacal-aura-test input[type=color]:disabled{opacity:.35;cursor:not-allowed}
  #shacal-aura-test output{float:right;color:#77ebdc}
  #shacal-aura-test small{display:block;color:#b3c1cd}
- </style><section><h3>Aura postaci</h3>
- <label><input type="checkbox" data-key="enabled"> Włącz aurę</label>
- <label><input type="checkbox" data-key="overrideNative"> Zastąp poświaty gry</label>
- <nav class="gm-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-gm-tab="aura">Aura</button><button type="button" role="tab" aria-selected="false" data-gm-tab="neon">Neon</button><button type="button" role="tab" aria-selected="false" data-gm-tab="trails">Ślady</button></nav>
+  </style><section><h3>Aura postaci</h3>
+  <label><input type="checkbox" data-key="enabled"> Włącz aurę</label>
+  <label><input type="checkbox" data-key="overrideNative"> Zastąp poświaty gry</label>
+  <div class="gm-profile-bar"><strong data-profile-character>Postać: oczekiwanie…</strong><div><button type="button" data-profile-save>ZAPISZ SET</button><button type="button" data-profile-load>WCZYTAJ SET</button></div><small data-profile-status>Profil zostanie przypisany do aktualnej postaci.</small></div>
+  <nav class="gm-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-gm-tab="aura">Aura</button><button type="button" role="tab" aria-selected="false" data-gm-tab="neon">Neon</button><button type="button" role="tab" aria-selected="false" data-gm-tab="trails">Ślady</button></nav>
   <div class="gm-common gm-pane" data-gm-pane="neon">
   <h4>Neon</h4>
   <label><input type="checkbox" class="aura-switch" role="switch" data-key="neonSelected"> Włącz Neon</label>
@@ -125,7 +149,22 @@
    </div><div class="gm-party-controls"><strong>Disco Polo</strong><button type="button" data-disco="disco" aria-pressed="false">Disco</button><button type="button" data-disco="haloDisco" aria-pressed="false">Polo</button><button type="button" data-music disabled>START</button></div><small data-status>Oczekiwanie na postać…</small><small>Ustawienia zapisują się od razu.</small></section>`;
  const godHost=document.getElementById('shacal-godmode-host');(godHost||document.body).append(root);
  if(!godHost){const mover=setInterval(()=>{const host=document.getElementById('shacal-godmode-host');if(host){host.append(root);clearInterval(mover);}},1000);}
- const panel=root.querySelector('section'),status=root.querySelector('[data-status]');
+  const panel=root.querySelector('section'),status=root.querySelector('[data-status]');
+  const profileCharacter=root.querySelector('[data-profile-character]'),profileStatus=root.querySelector('[data-profile-status]'),profileSaveButton=root.querySelector('[data-profile-save]'),profileLoadButton=root.querySelector('[data-profile-load]');
+  const refreshProfileUi=()=>{
+   const hasCharacter=!!activeProfileKey,hasProfile=hasCharacter&&!!profiles[activeProfileKey];
+   profileCharacter.textContent=hasCharacter?'Postać: '+activeCharacterName:'Postać: oczekiwanie na grę…';
+   profileSaveButton.disabled=!hasCharacter;profileLoadButton.disabled=!hasProfile;
+  };
+  const profileMessage=message=>{profileStatus.textContent=message;};
+  const activateCharacterProfile=hero=>{
+   const info=getCharacterInfo(hero);
+   if(!info){if(activeProfileKey){activeProfileKey=null;activeCharacterName='';refreshProfileUi();}return;}
+   if(info.key===activeProfileKey)return;
+   activeProfileKey=info.key;activeCharacterName=info.name;refreshProfileUi();
+   if(profiles[activeProfileKey]){applyProfile(profiles[activeProfileKey]);profileMessage('Wczytano zapisany set tej postaci.');syncColorControls?.();}
+   else profileMessage('Brak zapisanego setu — używane są bieżące ustawienia.');
+  };
  const gmPanes=[...root.querySelectorAll('[data-gm-pane]')];
  const selectGmTab=tab=>{for(const pane of gmPanes)pane.hidden=pane.dataset.gmPane!==tab;for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.setAttribute('aria-selected',String(tabButton.dataset.gmTab===tab));};
  for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.onclick=()=>selectGmTab(tabButton.dataset.gmTab);
@@ -159,6 +198,12 @@
     const neonSelector=root.querySelector('[data-key="neonSelected"]'),pentagramSelector=root.querySelector('[data-key="pentagramSelected"]');
     if(neonSelector)neonSelector.checked=state.neonSelected;
     if(pentagramSelector)pentagramSelector.checked=state.pentagramSelected;
+    for(const input of root.querySelectorAll('[data-key]')){
+     const key=input.dataset.key;
+     if(input.type==='checkbox')input.checked=key==='rgb'?state.rgb&&!state.rgbMulti:key==='rgbMulti'?state.rgbMulti:key==='haloRgb'?state.haloRgb&&!state.haloRgbMulti:key==='haloRgbMulti'?state.haloRgbMulti:key==='trailRgb'?state.trailRgb&&!state.trailRgbMulti:key==='trailRgbMulti'?state.trailRgbMulti:state[key];
+     else input.value=state[key];
+     const output=root.querySelector(`[data-value="${key}"]`);if(output)output.textContent=formatOutput(key,state[key]);
+    }
     for(const pentagramOption of root.querySelectorAll('[data-pentagram-options]'))pentagramOption.hidden=!state.pentagramSelected;
     for(const neonOption of root.querySelectorAll('[data-neon-options]'))neonOption.hidden=!state.neonSelected;
   if(!state.trail||!state.enabled){footprints=[];lastStep=null;}
@@ -191,8 +236,21 @@
      }
      if(output)output.textContent=formatOutput(k,state[k]);syncColorControls();announceChange();};
  }
- syncColorControls();
- for(const discoButton of root.querySelectorAll('[data-disco]'))discoButton.onclick=()=>{
+  syncColorControls();
+  const saveCharacterProfile=()=>{
+   if(!activeProfileKey){profileMessage('Brak aktywnej postaci.');return;}
+   profiles[activeProfileKey]={...profileSnapshot(),savedAt:Date.now()};
+   profileMessage(persistProfiles()?'Zapisano set dla tej postaci.':'Nie udało się zapisać setu.');
+   refreshProfileUi();
+  };
+  const loadCharacterProfile=()=>{
+   if(!activeProfileKey||!profiles[activeProfileKey]){profileMessage('Brak zapisanego setu dla tej postaci.');return;}
+   applyProfile(profiles[activeProfileKey]);syncColorControls();announceChange();profileMessage('Wczytano zapisany set tej postaci.');
+  };
+  profileSaveButton.onclick=saveCharacterProfile;
+  profileLoadButton.onclick=loadCharacterProfile;
+  refreshProfileUi();
+  for(const discoButton of root.querySelectorAll('[data-disco]'))discoButton.onclick=()=>{
   const mode=discoButton.dataset.disco,rgb=mode==='disco'?'rgb':'haloRgb';
   state[mode]=!(state[mode]&&state[rgb]);
   if(state[mode]){state[rgb]=true;root.querySelector(`[data-key="${rgb}"]`).checked=true;}
@@ -382,10 +440,11 @@
   }finally{g.restore();}
  }
  function detach(){if(binding){if(binding.hero.drawIcon===binding.wrapper){if(binding.own)binding.hero.drawIcon=binding.original;else delete binding.hero.drawIcon;}if(binding.listWrapper&&binding.hero.getDrawableList===binding.listWrapper){if(binding.listOwn)binding.hero.getDrawableList=binding.listOriginal;else delete binding.hero.getDrawableList;}}binding=null;}
- function attach(){
-  if(disposed)return;
-  const hero=window.Engine?.hero;
-  if(binding?.hero===hero){status.textContent=lastError?'Aura: '+lastError:draws?'Aura aktywna · ustawienia zapisane':'Oczekiwanie na rysowanie postaci…';return;}
+  function attach(){
+   if(disposed)return;
+   const hero=window.Engine?.hero;
+   activateCharacterProfile(hero);
+   if(binding?.hero===hero){status.textContent=lastError?'Aura: '+lastError:draws?'Aura aktywna · ustawienia zapisane':'Oczekiwanie na rysowanie postaci…';return;}
   detach();draws=0;
   if(!hero||typeof hero.drawIcon!=='function'||typeof hero.getCharacterLeft!=='function'||typeof hero.getCharacterTop!=='function'){status.textContent='Oczekiwanie na funkcje rysowania postaci…';return;}
   const original=hero.drawIcon,own=Object.hasOwn(hero,'drawIcon');
@@ -408,7 +467,7 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.4.2',save:saveGodMode,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.5.0',save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);detach();root.remove();}};
 })();
 
 
