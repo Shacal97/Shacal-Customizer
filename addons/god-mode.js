@@ -1,7 +1,7 @@
 // ==UserScript==
 // God Mode — Customizacja efektów wizualnych wokół postaci.
 // @namespace    shacal.aura.test
-// @version      0.6.0
+// @version      0.7.0
 // @description  Customizacja efektów wizualnych wokół postaci.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
@@ -54,6 +54,7 @@
   const profileStorageKey='shacalGodModeProfilesV1',setsStorageKey='shacalGodModeSetsV1';
   const profileFields=['enabled','overrideNative','color','size','opacity','speed','halo','haloSize','haloOpacity','haloColor','haloRgb','haloRgbMulti','haloRgbSpeed','rgb','rgbMulti','rgbSpeed','neonEnabled','neonStyle','neonSelected','pentagramSelected','pentagramStyle','pentagramSpeed','pentagramSize','haloStyle','disco','haloDisco','trail','trailColor','trailRgb','trailRgbMulti','trailLife','trailSize','trailOpacity'];
   let profiles={};try{const stored=JSON.parse(localStorage.getItem(profileStorageKey)||'{}');if(stored&&typeof stored==='object'&&!Array.isArray(stored))profiles=stored;}catch{}
+  const maxNamedSets=15;
   let namedSets={};try{const stored=JSON.parse(localStorage.getItem(setsStorageKey)||'{}');if(stored&&typeof stored==='object'&&!Array.isArray(stored))namedSets=stored;}catch{}
   for(const [profileKey,profile] of Object.entries(profiles))if(profile&&typeof profile==='object'&&!profile.setId){const setId='legacy-'+profileKey.replace(/[^a-z0-9_-]/gi,'_');namedSets[setId]={...profile,name:String(profile.setName||profile.characterName||'Set postaci'),characterName:profile.characterName||profileKey};profile.setId=setId;profile.setName=namedSets[setId].name;}
   let activeProfileKey=null,activeCharacterName='';
@@ -70,6 +71,7 @@
   const profileSnapshot=()=>Object.fromEntries(profileFields.map(field=>[field,state[field]]));
   const persistProfiles=()=>{try{localStorage.setItem(profileStorageKey,JSON.stringify(profiles));return true;}catch{return false;}};
   const persistSets=()=>{try{localStorage.setItem(setsStorageKey,JSON.stringify(namedSets));return true;}catch{return false;}};
+  if(Object.keys(namedSets).length>maxNamedSets){for(const [setId] of Object.entries(namedSets).sort((a,b)=>Number(b[1]?.savedAt||0)-Number(a[1]?.savedAt||0)).slice(maxNamedSets))delete namedSets[setId];persistSets();}
   const applyProfile=profile=>{if(!profile||typeof profile!=='object')return false;for(const field of profileFields)if(Object.prototype.hasOwnProperty.call(profile,field))state[field]=profile[field];state.neonStyle=state.pentagramSelected?'pentagram':'soft';state.neonEnabled=state.neonSelected||state.pentagramSelected;return true;};
  let binding=null,disposed=false,lastError='',draws=0,lastPaintAt=0,lastPaintX=NaN,lastPaintY=NaN;
  let godModeDirty=false;
@@ -99,9 +101,6 @@
   #shacal-aura-test .gm-profile-bar button{padding:6px 8px;font-size:10px;flex:1}
   #shacal-aura-test .gm-profile-bar button:disabled{opacity:.45;cursor:not-allowed}
   #shacal-aura-test .gm-profile-bar small{margin-top:6px;font-size:10px;white-space:normal}
-  #shacal-aura-test .gm-preview{margin:0 0 12px;padding:7px 10px;border:1px solid #ffffff20;border-radius:7px;background:#080f1580;text-align:center}
-  #shacal-aura-test .gm-preview canvas{display:block;width:180px;height:142px;max-width:100%;margin:0 auto;border-radius:5px;background:radial-gradient(circle at 50% 64%,#17232d,#080c12 72%);image-rendering:auto}
-  #shacal-aura-test .gm-preview small{margin-top:3px;font-size:10px;color:#9eafba}
  #shacal-aura-test section{width:100%;max-width:none;max-height:none;height:100%;overflow-y:auto;padding:10px 20px 20px;margin:0;background:transparent;border:0;border-radius:0;box-shadow:none}
  #shacal-aura-test section[hidden]{display:none}
  #shacal-aura-test [hidden]{display:none!important}
@@ -127,7 +126,7 @@
   <label><input type="checkbox" data-key="overrideNative"> Zastąp poświaty gry</label>
   <div class="gm-profile-bar"><strong data-profile-character>Postać: oczekiwanie…</strong><small data-profile-status>Profil zostanie przypisany do aktualnej postaci.</small></div>
   <nav class="gm-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-gm-tab="aura">Aura</button><button type="button" role="tab" aria-selected="false" data-gm-tab="neon">Neon</button><button type="button" role="tab" aria-selected="false" data-gm-tab="trails">Ślady</button><button type="button" role="tab" aria-selected="false" data-gm-tab="sets">Zapisane Sety</button></nav>
-  <div class="gm-pane" data-gm-pane="sets"><h4>Zapisane Sety</h4><label>Nazwa nowego setu <input type="text" data-profile-name maxlength="40" placeholder="np. Pentagram różowy"></label><button type="button" data-profile-save>ZAPISZ SET</button><details class="gm-profile-sets" open><summary>LISTA SETÓW</summary><select data-profile-list aria-label="Zapisane sety"><option value="">Brak zapisanych setów</option></select></details><button type="button" data-profile-load>WCZYTAJ WYBRANY SET</button><div class="gm-preview"><canvas data-profile-preview width="360" height="284"></canvas><small>Podgląd wybranego efektu na szkielecie postaci</small></div></div>
+  <div class="gm-pane" data-gm-pane="sets"><h4>Zapisane Sety</h4><label>Nazwa nowego setu <input type="text" data-profile-name maxlength="40" placeholder="np. Pentagram różowy"></label><button type="button" data-profile-save>ZAPISZ SET</button><details class="gm-profile-sets" open><summary>LISTA SETÓW</summary><select data-profile-list aria-label="Zapisane sety"><option value="">Brak zapisanych setów</option></select></details><button type="button" data-profile-load>WCZYTAJ WYBRANY SET</button><button type="button" data-profile-delete>USUŃ WYBRANY SET</button><small data-profile-limit>Limit: 0/15 setów</small></div>
   <div class="gm-common gm-pane" data-gm-pane="neon">
   <h4>Neon</h4>
   <label><input type="checkbox" class="aura-switch" role="switch" data-key="neonSelected"> Włącz Neon</label>
@@ -165,8 +164,7 @@
  const godHost=document.getElementById('shacal-godmode-host');(godHost||document.body).append(root);
  if(!godHost){const mover=setInterval(()=>{const host=document.getElementById('shacal-godmode-host');if(host){host.append(root);clearInterval(mover);}},1000);}
   const panel=root.querySelector('section'),status=root.querySelector('[data-status]');
-   const profileCharacter=root.querySelector('[data-profile-character]'),profileStatus=root.querySelector('[data-profile-status]'),profileNameInput=root.querySelector('[data-profile-name]'),profileList=root.querySelector('[data-profile-list]'),profileSaveButton=root.querySelector('[data-profile-save]'),profileLoadButton=root.querySelector('[data-profile-load]'),previewCanvas=root.querySelector('[data-profile-preview]'),previewPane=root.querySelector('[data-gm-pane="sets"]');
-   let previewStateOverride=null;
+   const profileCharacter=root.querySelector('[data-profile-character]'),profileStatus=root.querySelector('[data-profile-status]'),profileNameInput=root.querySelector('[data-profile-name]'),profileList=root.querySelector('[data-profile-list]'),profileSaveButton=root.querySelector('[data-profile-save]'),profileLoadButton=root.querySelector('[data-profile-load]'),profileDeleteButton=root.querySelector('[data-profile-delete]'),profileLimit=root.querySelector('[data-profile-limit]');
    const refreshProfileUi=()=>{
     const hasCharacter=!!activeProfileKey,hasProfile=hasCharacter&&!!profiles[activeProfileKey];
     profileCharacter.textContent=hasCharacter?'Postać: '+activeCharacterName:'Postać: oczekiwanie na grę…';
@@ -175,8 +173,8 @@
      const option=new Option(String(set?.name||set?.characterName||key),key);profileList.append(option);
     }
     const currentSetId=profiles[activeProfileKey]?.setId;
-    profileList.value=namedSets[selected]?selected:(namedSets[currentSetId]?currentSetId:'');profileList.disabled=Object.keys(namedSets).length===0;previewStateOverride=namedSets[profileList.value]||null;
-    profileSaveButton.disabled=!hasCharacter;profileLoadButton.disabled=!namedSets[profileList.value];
+    profileList.value=namedSets[selected]?selected:(namedSets[currentSetId]?currentSetId:'');profileList.disabled=Object.keys(namedSets).length===0;
+    profileSaveButton.disabled=!hasCharacter||Object.keys(namedSets).length>=maxNamedSets;profileLoadButton.disabled=!namedSets[profileList.value];profileDeleteButton.disabled=!namedSets[profileList.value];profileLimit.textContent=`Limit: ${Object.keys(namedSets).length}/${maxNamedSets} setów`;
    };
   const profileMessage=message=>{profileStatus.textContent=message;};
   const activateCharacterProfile=hero=>{
@@ -191,7 +189,10 @@
  const selectGmTab=tab=>{for(const pane of gmPanes)pane.hidden=pane.dataset.gmPane!==tab;for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.setAttribute('aria-selected',String(tabButton.dataset.gmTab===tab));};
  for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.onclick=()=>selectGmTab(tabButton.dataset.gmTab);
  selectGmTab('aura');
- const musicButton=root.querySelector('[data-music]');
+ const partyControls=root.querySelector('.gm-party-controls'),musicButton=partyControls.querySelector('[data-music]');
+ let partyMover=0;
+ const movePartyControls=()=>{const host=document.getElementById('sg-godmode-party-host');if(host&&partyControls.parentElement!==host)host.append(partyControls);};
+ movePartyControls();partyMover=setInterval(movePartyControls,500);
  let music=null,playing=false,playToken=0;
  const canPlay=()=>state.enabled&&state.neonEnabled&&state.halo&&state.disco&&state.rgb&&state.haloDisco&&state.haloRgb;
  function stopMusic(){playToken++;playing=false;if(music){music.pause();music.currentTime=0;}musicButton.textContent='START';}
@@ -202,41 +203,6 @@
   const token=++playToken;playing=true;musicButton.textContent='STOP';
   try{await music.play();}catch{if(token===playToken){stopMusic();status.textContent='Odtwarzanie zablokowane. Spróbuj ponownie.';}}
   };
-  function drawPreview(){
-   const g=previewCanvas?.getContext('2d');if(!g)return;
-   const view=previewStateOverride||state;
-   const w=previewCanvas.width,h=previewCanvas.height,now=performance.now()/1000;
-   g.clearRect(0,0,w,h);g.save();g.translate(w/2,h*.62);
-   const hue=(base,phase=0)=>{const isHalo=base==='halo',rgb=isHalo?view.haloRgb:view.rgb,multi=isHalo?view.haloRgbMulti:view.rgbMulti,speed=isHalo?view.haloRgbSpeed:view.rgbSpeed;return rgb?`hsla(${(now*36*speed+(multi?phase:0))%360},100%,65%,1)`:isHalo?view.haloColor:view.color;};
-   if(view.enabled&&view.halo){
-    const scale=.7*view.haloSize,haloColor=hue('halo');
-    g.save();g.scale(scale,scale);
-    if(view.haloStyle==='petals'){
-     for(let i=0;i<16;i++){const life=(now*.16+i*.19)%1,x=(i%2?-1:1)*(28+(i%5)*8)+Math.sin(now*.8+i)*12,y=-92+life*120,r=Math.sin(life*Math.PI);g.save();g.translate(x,y);g.rotate(Math.sin(now*.7+i));g.globalAlpha=view.haloOpacity*r*.8;g.fillStyle=haloColor;g.shadowColor=haloColor;g.shadowBlur=8;g.beginPath();g.ellipse(0,0,4,8,.4,0,Math.PI*2);g.fill();g.restore();}
-    }else if(view.haloStyle==='smoke'||view.haloStyle==='fire'){
-     for(let i=0;i<7;i++){const life=(now*(view.haloStyle==='fire'?.35:.22)+i*.17)%1,x=Math.sin(now*(view.haloStyle==='fire'?1.1:.7)+i*2.3)*22*(.3+life),y=-life*105,r=(8+life*15)*(1-life*.35);g.beginPath();g.ellipse(x,y,r,r*1.35,0,0,Math.PI*2);g.fillStyle=haloColor;g.shadowColor=haloColor;g.shadowBlur=view.haloStyle==='fire'?12:18;g.globalAlpha=view.haloOpacity*.22*Math.sin(life*Math.PI);g.fill();}
-    }else if(view.haloStyle==='chakra'){
-     for(let i=0;i<3;i++){g.beginPath();g.moveTo(0,20);g.quadraticCurveTo(Math.sin(now*1.4+i*2.1)*45,-35,Math.cos(now+i)*20,-120);g.strokeStyle=haloColor;g.lineWidth=8-i*2;g.lineCap='round';g.globalAlpha=view.haloOpacity*.35;g.shadowColor=haloColor;g.shadowBlur=12;g.stroke();}
-    }else{
-     const grad=g.createRadialGradient(0,0,3,0,0,72);grad.addColorStop(0,haloColor);grad.addColorStop(1,'transparent');g.fillStyle=grad;g.globalAlpha=view.haloOpacity*.8;g.beginPath();g.ellipse(0,5,48,76,0,0,Math.PI*2);g.fill();
-    }
-    g.restore();
-   }
-   if(view.enabled&&view.neonEnabled){
-    const neonColor=hue('neon');g.save();
-    if(view.neonStyle==='pentagram'){
-     const size=.42+view.pentagramSize*.18;g.translate(0,19);g.scale(size,size);g.scale(1,.58);if(view.pentagramStyle!=='static')g.rotate(now*view.pentagramSpeed);
-     g.strokeStyle=neonColor;g.shadowColor=neonColor;g.shadowBlur=12;g.lineCap='round';g.lineJoin='round';g.globalAlpha=view.opacity;g.lineWidth=3;g.beginPath();g.arc(0,0,39,0,Math.PI*2);g.stroke();g.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?16:39,x=Math.cos(a)*r,y=Math.sin(a)*r;i?g.lineTo(x,y):g.moveTo(x,y);}g.closePath();g.stroke();
-    }else{
-     g.translate(0,18);g.scale(view.size,Math.max(.45,view.size*.62));g.strokeStyle=neonColor;g.shadowColor=neonColor;g.shadowBlur=12;g.globalAlpha=view.opacity;g.lineWidth=4;g.beginPath();g.ellipse(0,0,32,17,0,0,Math.PI*2);g.stroke();
-    }
-    g.restore();
-   }
-   // Neutral skeleton used only as a visual reference for the effect placement.
-   g.save();g.strokeStyle='#dcecf2';g.fillStyle='#b8d7df';g.shadowColor='#8be8ea';g.shadowBlur=5;g.globalAlpha=.9;g.lineWidth=4;g.lineCap='round';
-   g.beginPath();g.arc(0,-54,12,0,Math.PI*2);g.stroke();g.beginPath();g.moveTo(0,-42);g.lineTo(0,6);g.moveTo(-21,-26);g.lineTo(21,-26);g.moveTo(0,6);g.lineTo(-15,39);g.moveTo(0,6);g.lineTo(15,39);g.stroke();
-   g.lineWidth=2;g.beginPath();g.moveTo(-8,-30);g.lineTo(8,-30);g.moveTo(-8,-22);g.lineTo(8,-22);g.moveTo(-7,-14);g.lineTo(7,-14);g.stroke();g.fillStyle='#071119';g.beginPath();g.arc(-4,-57,2,0,Math.PI*2);g.arc(4,-57,2,0,Math.PI*2);g.fill();g.restore();g.restore();
-  }
   const syncColorControls=()=>{
   musicButton.disabled=!canPlay();
   if(!canPlay()&&playing)stopMusic();
@@ -265,16 +231,15 @@
     for(const neonOption of root.querySelectorAll('[data-neon-options]'))neonOption.hidden=!state.neonSelected;
   if(!state.trail||!state.enabled){footprints=[];lastStep=null;}
    for(const [mode,rgb,speed] of [['disco','rgb','rgbSpeed'],['haloDisco','haloRgb','haloRgbSpeed']]){
-    root.querySelector(`[data-disco="${mode}"]`).setAttribute('aria-pressed',String(state[mode]&&state[rgb]));
+    partyControls.querySelector(`[data-disco="${mode}"]`).setAttribute('aria-pressed',String(state[mode]&&state[rgb]));
      root.querySelector(`[data-key="${speed}"]`).disabled=!state[rgb]||(state[mode]&&state[rgb]);
    }
-   drawPreview();
   };
   const formatOutput=(key,value)=>key==='pentagramSize'||key==='pentagramSpeed'?Number(value).toFixed(2):value;
   for(const input of root.querySelectorAll('[data-key]')){
    const k=input.dataset.key;if(input.type==='checkbox'){input.checked=k==='rgb'?state.rgb&&!state.rgbMulti:k==='rgbMulti'?state.rgbMulti:k==='haloRgb'?state.haloRgb&&!state.haloRgbMulti:k==='haloRgbMulti'?state.haloRgbMulti:k==='trailRgb'?state.trailRgb&&!state.trailRgbMulti:k==='trailRgbMulti'?state.trailRgbMulti:state[k];}else input.value=state[k];
    const output=root.querySelector(`[data-value="${k}"]`);if(output)output.textContent=formatOutput(k,state[k]);
-   input.oninput=()=>{previewStateOverride=null;state[k]=input.type==='checkbox'?input.checked:(input.type==='color'||input.tagName==='SELECT')?input.value:Number(input.value);
+   input.oninput=()=>{state[k]=input.type==='checkbox'?input.checked:(input.type==='color'||input.tagName==='SELECT')?input.value:Number(input.value);
     if(k==='color'){state.rgb=false;state.rgbMulti=false;}
     if(k==='haloColor'){state.haloRgb=false;state.haloRgbMulti=false;}
     if(k==='trailColor'){state.trailRgb=false;state.trailRgbMulti=false;}
@@ -297,6 +262,7 @@
   syncColorControls();
   const saveCharacterProfile=()=>{
    if(!activeProfileKey){profileMessage('Brak aktywnej postaci.');return;}
+   if(Object.keys(namedSets).length>=maxNamedSets){profileMessage(`Osiągnięto limit ${maxNamedSets} setów. Usuń jeden, aby zapisać kolejny.`);return;}
    let name=String(profileNameInput.value||'').trim();
    if(!name)name=String(window.prompt('Nazwa zapisywanego setu:',activeCharacterName+' — set')||'').trim();
    if(!name){profileMessage('Podaj nazwę setu.');return;}
@@ -314,14 +280,21 @@
    if(activeProfileKey){profiles[activeProfileKey]={...profileSnapshot(),characterName:activeCharacterName,setId:selectedKey,setName:String(selectedSet.name||selectedKey),savedAt:Date.now()};persistProfiles();}
    profileMessage('Wczytano set: '+String(selectedSet.name||selectedKey)+'.');refreshProfileUi();
   };
+  const deleteCharacterProfile=()=>{
+   const selectedKey=profileList.value;
+   if(!selectedKey||!namedSets[selectedKey]){profileMessage('Wybierz set do usunięcia.');return;}
+   const selectedSet=namedSets[selectedKey],name=String(selectedSet.name||selectedKey);
+   if(!window.confirm(`Usunąć set „${name}”?`))return;
+   delete namedSets[selectedKey];
+   for(const profile of Object.values(profiles))if(profile?.setId===selectedKey){delete profile.setId;delete profile.setName;}
+   const ok=persistSets()&&persistProfiles();profileMessage(ok?'Usunięto set „'+name+'”.':'Nie udało się usunąć setu.');refreshProfileUi();
+  };
   profileSaveButton.onclick=saveCharacterProfile;
   profileLoadButton.onclick=loadCharacterProfile;
-  profileList.onchange=()=>{profileLoadButton.disabled=!namedSets[profileList.value];previewStateOverride=namedSets[profileList.value]||null;drawPreview();};
-  let previewTimer=0;
-  const previewTick=()=>{if(disposed)return;if(previewCanvas?.isConnected&&previewPane&&!previewPane.hidden)drawPreview();previewTimer=setTimeout(previewTick,50);};
-  previewTick();
+  profileDeleteButton.onclick=deleteCharacterProfile;
+  profileList.onchange=()=>{profileLoadButton.disabled=!namedSets[profileList.value];profileDeleteButton.disabled=!namedSets[profileList.value];};
   refreshProfileUi();
-  for(const discoButton of root.querySelectorAll('[data-disco]'))discoButton.onclick=()=>{
+  for(const discoButton of partyControls.querySelectorAll('[data-disco]'))discoButton.onclick=()=>{
   const mode=discoButton.dataset.disco,rgb=mode==='disco'?'rgb':'haloRgb';
   state[mode]=!(state[mode]&&state[rgb]);
   if(state[mode]){state[rgb]=true;root.querySelector(`[data-key="${rgb}"]`).checked=true;}
@@ -538,8 +511,9 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.6.0',save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);clearTimeout(previewTimer);detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.7.0',save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,deleteProfile:deleteCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);clearInterval(partyMover);partyControls.remove();detach();root.remove();}};
 })();
+
 
 
 

@@ -1,9 +1,9 @@
-/* Shacal core 6.7.0 */
+/* Shacal core 6.8.0 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.7.0';
+ctx.SHACAL_SCRIPT_VERSION = '6.8.0';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -3260,7 +3260,7 @@ declare(ctx){
         const hint=panel.querySelector('.sg-save-hint');if(hint)hint.textContent='Każdy dodatek zapisujesz osobno.';
         const brand=panel.querySelector('.brand-title');
         if(brand){const img=document.createElement('img');img.className='sg-custom-logo';img.src='https://shacal97.github.io/Shacal-Customizer/assets/shacal-logo-v630.png';img.alt='Shacal Customizer';brand.replaceChildren(img);}
-        const back=document.createElement('button');back.className='sg-back-addons';back.type='button';back.textContent='WSTECZ';back.addEventListener('click',()=>panel.querySelector('#sg-tab-home').click());const actions=document.createElement('div');actions.className='sg-footer-actions';actions.append(back);panel.querySelector('.sg-save-footer').append(actions);
+        const back=document.createElement('button');back.className='sg-back-addons';back.type='button';back.textContent='WSTECZ';back.addEventListener('click',()=>panel.querySelector('#sg-tab-home').click());const actions=document.createElement('div');actions.className='sg-footer-actions';actions.append(back);const partyHost=document.createElement('div');partyHost.id='sg-godmode-party-host';partyHost.className='sg-godmode-party-host';const footer=panel.querySelector('.sg-save-footer');footer.append(actions);footer.insertBefore(partyHost,actions);
         const icons=['✧','▣','❝','⌖','◷','✦'];
         panel.querySelectorAll('.sg-addon-card').forEach((card,i)=>{
             const id=card.querySelector('[data-addon-switch]').dataset.addonSwitch;card.dataset.addonCard=id;
@@ -3306,11 +3306,19 @@ declare(ctx){
 #shacal-glow-panel .sg-save-footer{display:flex!important;flex-direction:row!important;justify-content:space-between;gap:12px!important}
 #shacal-glow-panel .sg-save-hint{display:none}
 #shacal-glow-panel .sg-footer-actions{display:flex;gap:10px;flex-shrink:0}
+#shacal-glow-panel .sg-godmode-party-host{display:none;align-items:center;gap:7px;margin-left:auto;margin-right:4px;min-width:0}
+#shacal-glow-panel:has(#sg-tab-godmode-content.active) .sg-godmode-party-host{display:flex}
+#shacal-glow-panel .sg-godmode-party-host .gm-party-controls{display:flex;align-items:center;gap:7px;margin:0;padding:0;border:0}
+#shacal-glow-panel .sg-godmode-party-host .gm-party-controls strong{color:#cfa6ee;font-size:11px;margin-right:2px}
+#shacal-glow-panel .sg-godmode-party-host .gm-party-controls button{display:block;width:auto;height:36px;padding:8px 12px!important;border:1px solid #9762b3!important;border-radius:6px!important;background:linear-gradient(#2d1d3d,#171122)!important;color:#ebc6ff!important;font:600 10px Arial,sans-serif!important;letter-spacing:.3px;cursor:pointer;box-shadow:inset 0 1px #ffffff20!important}
+#shacal-glow-panel .sg-godmode-party-host .gm-party-controls button[data-music]{border-color:#42d3bf!important;background:linear-gradient(#176658,#10392f)!important;color:#dcfff6!important}
+#shacal-glow-panel .sg-godmode-party-host .gm-party-controls button[aria-pressed=true]{background:linear-gradient(110deg,#632875,#175d64)!important;border-color:#ee94ff!important;color:#fff!important;box-shadow:0 0 9px #d751e64d!important}
+#shacal-glow-panel .sg-godmode-party-host .gm-party-controls button:disabled{opacity:.5;cursor:default}
 #shacal-glow-panel:has(#sg-tab-home-content.active) .sg-footer-actions{display:none}
 #shacal-glow-panel .sg-footer-actions button{display:block;width:132px;height:36px;padding:8px!important;border:1px solid #42d3bf!important;border-radius:6px!important;background:linear-gradient(#176658,#10392f)!important;color:#dcfff6!important;font:600 10px Arial,sans-serif!important;letter-spacing:.4px!important;cursor:pointer;box-shadow:inset 0 1px #ffffff20!important}
 #shacal-glow-panel .sg-footer-actions button:active:not(:disabled){transform:translateY(1px)}
 #shacal-glow-panel .sg-footer-actions button:disabled{opacity:.5;cursor:default}
-@media(max-width:600px){#shacal-glow-panel .sg-save-footer{height:102px!important;min-height:102px!important;flex-wrap:wrap;justify-content:center;padding:8px 12px!important}#shacal-glow-panel .sg-compact-workspace{height:calc(100% - 218px)!important}#shacal-glow-panel .sg-transparency{width:100%;max-width:none}#shacal-glow-panel .sg-footer-actions{width:100%}#shacal-glow-panel .sg-footer-actions button{width:auto;flex:1}}
+@media(max-width:600px){#shacal-glow-panel .sg-save-footer{height:102px!important;min-height:102px!important;flex-wrap:wrap;justify-content:center;padding:8px 12px!important}#shacal-glow-panel .sg-compact-workspace{height:calc(100% - 218px)!important}#shacal-glow-panel .sg-transparency{width:100%;max-width:none}#shacal-glow-panel .sg-godmode-party-host{width:100%;margin:0;justify-content:center;order:1}#shacal-glow-panel .sg-footer-actions{width:100%;order:2}#shacal-glow-panel .sg-footer-actions button{width:auto;flex:1}}
 `;document.head.append(style);
     };
 },init(){}});
