@@ -1,5 +1,5 @@
 {
-  "version": "6.4.5",
+  "version": "6.4.6",
   "scripts": [
     "panel.js",
     "addons/glow.js",
@@ -26,4 +26,5 @@
     "core/ui-v630.js"
   ]
 }
+
 
