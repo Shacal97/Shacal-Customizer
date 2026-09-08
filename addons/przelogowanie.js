@@ -190,7 +190,7 @@ ctx.startE2Relogger = function startE2Relogger() {
             try{ctx.syncE2Relogger();}
             catch{ctx.hideE2Tooltip();const status=document.getElementById('sg-e2-status');if(status)status.textContent='Nie udało się odczytać minutnika. Ponawiam odczyt.';}
         };
-        setInterval(refresh,1000);
+        setInterval(()=>{if(!document.hidden&&ctx.addonFeatureEnabled('e2ReloggerEnabled'))refresh();},1000);
         window.addEventListener('focus',refresh);
         window.addEventListener('pageshow',refresh);
         document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});

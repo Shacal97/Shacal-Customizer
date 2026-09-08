@@ -578,6 +578,9 @@ ctx.syncItemGlowAnimations = function syncItemGlowAnimations(windowElement) {
         });
     };
 ctx.findMapBoundsElement = function findMapBoundsElement() {
+        const now=performance.now(),cached=ctx.cachedMapBounds;
+        if(cached?.isConnected&&now-ctx.cachedMapBoundsAt<250){const r=cached.getBoundingClientRect();if(r.width>=300&&r.height>=200&&r.right>0&&r.bottom>0&&r.left<innerWidth&&r.top<innerHeight)return cached;}
+        const remember=element=>{ctx.cachedMapBounds=element;ctx.cachedMapBoundsAt=now;return element;};
         const isEffect = element => !!element.closest('.shacal-glow-overlay, .shacal-map-neon-frame, .shacal-energy-canvas');
         const selectors = [ '.map-wrapper', '.map-layer', '.game-window', '[class*="map-wrapper"]', '[class*="map-layer"]' ];
         const candidates = [];
@@ -599,14 +602,14 @@ ctx.findMapBoundsElement = function findMapBoundsElement() {
                 }
                 return ( b.rect.width * b.rect.height - a.rect.width * a.rect.height );
             });
-            return candidates[0].element;
+            return remember(candidates[0].element);
         }
         const canvases = Array.from(document.querySelectorAll('canvas')).filter(element => !isEffect(element)) .map(element => ({
                     element, rect: element.getBoundingClientRect()
                 })) .filter(({ rect }) => rect.width >= 300 && rect.height >= 200 && rect.right > 0 && rect.bottom > 0 ) .sort( (a, b) => b.rect.width * b.rect.height -
                         a.rect.width * a.rect.height );
         return canvases.length
-            ? canvases[0].element
+            ? remember(canvases[0].element)
             : null;
     };
 ctx.getMapGlowGameLayer = function getMapGlowGameLayer( mapElement ) {

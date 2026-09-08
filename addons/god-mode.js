@@ -1,7 +1,7 @@
 // ==UserScript==
 // God Mode — Customizacja efektów wizualnych wokół postaci.
 // @namespace    shacal.aura.test
-// @version      0.7.0
+// @version      0.8.0
 // @description  Customizacja efektów wizualnych wokół postaci.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
@@ -12,7 +12,7 @@
  if(window.top!==window.self || location.hostname!=='solphyr.margonem.pl')return;
  window.ShacalAuraTest?.dispose();
  const key='shacalAuraTestV1',defaults={enabled:true,color:'#23e4cf',size:1,opacity:.65,speed:1,halo:true};
- let raw={};try{raw=JSON.parse(localStorage.getItem(key))||{};}catch{}
+ let raw={};try{const saved=JSON.parse(localStorage.getItem(key));if(saved&&typeof saved==='object'&&!Array.isArray(saved))raw=saved;}catch{}
  const clamp=(v,min,max,fallback)=>Number.isFinite(Number(v))?Math.max(min,Math.min(max,Number(v))):fallback;
  const state={enabled:raw.enabled!==false,color:/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:defaults.color,size:clamp(raw.size,.5,2,1),opacity:clamp(raw.opacity,.1,1,.65),speed:clamp(raw.speed,0,2,1),halo:raw.halo!==false};
  state.haloSize=clamp(raw.haloSize ?? state.size,.5,2,1);
@@ -49,14 +49,13 @@
  state.trailSize=clamp(raw.trailSize,.5,2,1);
  state.trailShape=['foot','cat','bear','duck','dog'].includes(raw.trailShape)?raw.trailShape:'foot';
  state.trailOpacity=clamp(raw.trailOpacity,.1,1,.7);
- let footprints=[],lastStep=null,stepSide=1,trailMap=null,trailMapId=null,trailHero=null;
+ let trailSequence=0,footprints=[],lastStep=null,stepSide=1,trailMap=null,trailMapId=null,trailHero=null;
   state.overrideNative=raw.overrideNative!==false;
   const profileStorageKey='shacalGodModeProfilesV1',setsStorageKey='shacalGodModeSetsV1';
-  const profileFields=['enabled','overrideNative','color','size','opacity','speed','halo','haloSize','haloOpacity','haloColor','haloRgb','haloRgbMulti','haloRgbSpeed','rgb','rgbMulti','rgbSpeed','neonEnabled','neonStyle','neonSelected','pentagramSelected','pentagramStyle','pentagramSpeed','pentagramSize','haloStyle','disco','haloDisco','trail','trailColor','trailRgb','trailRgbMulti','trailLife','trailSize','trailOpacity'];
+  const profileFields=['enabled','overrideNative','color','size','opacity','speed','halo','haloSize','haloOpacity','haloColor','haloRgb','haloRgbMulti','haloRgbSpeed','rgb','rgbMulti','rgbSpeed','neonEnabled','neonStyle','neonSelected','pentagramSelected','pentagramStyle','pentagramSpeed','pentagramSize','haloStyle','disco','haloDisco','trail','trailColor','trailRgb','trailRgbMulti','trailLife','trailSize','trailOpacity','trailShape'];
   let profiles={};try{const stored=JSON.parse(localStorage.getItem(profileStorageKey)||'{}');if(stored&&typeof stored==='object'&&!Array.isArray(stored))profiles=stored;}catch{}
   const maxNamedSets=15;
   let namedSets={};try{const stored=JSON.parse(localStorage.getItem(setsStorageKey)||'{}');if(stored&&typeof stored==='object'&&!Array.isArray(stored))namedSets=stored;}catch{}
-  for(const [profileKey,profile] of Object.entries(profiles))if(profile&&typeof profile==='object'&&!profile.setId){const setId='legacy-'+profileKey.replace(/[^a-z0-9_-]/gi,'_');namedSets[setId]={...profile,name:String(profile.setName||profile.characterName||'Set postaci'),characterName:profile.characterName||profileKey};profile.setId=setId;profile.setName=namedSets[setId].name;}
   let activeProfileKey=null,activeCharacterName='';
   const getCharacterInfo=hero=>{
    if(!hero)return null;
@@ -64,19 +63,21 @@
    const id=data.id??hero.id??data.charId??hero.charId;
    const account=data.account??hero.accountId??hero.account??'account';
    const world=location.hostname.split('.')[0]||'world';
-   const name=String(data.nick??data.name??hero.nick??hero.name??(id!=null?'Postać '+id:'Postać'));
+   const resolvedName=data.nick??data.name??hero.nick??hero.name;
+   if((id==null||id==='')&&!resolvedName)return null;
+   const name=String(resolvedName??('Postać '+id));
    if(id==null||id==='')return {key:`${world}:${account}:name:${name}`,name};
    return {key:`${world}:${account}:${id}`,name};
   };
   const profileSnapshot=()=>Object.fromEntries(profileFields.map(field=>[field,state[field]]));
-  const persistProfiles=()=>{try{localStorage.setItem(profileStorageKey,JSON.stringify(profiles));return true;}catch{return false;}};
-  const persistSets=()=>{try{localStorage.setItem(setsStorageKey,JSON.stringify(namedSets));return true;}catch{return false;}};
-  if(Object.keys(namedSets).length>maxNamedSets){for(const [setId] of Object.entries(namedSets).sort((a,b)=>Number(b[1]?.savedAt||0)-Number(a[1]?.savedAt||0)).slice(maxNamedSets))delete namedSets[setId];persistSets();}
+  const writeStorage=entries=>{const previous=[];try{for(const [k,v] of entries){previous.push([k,localStorage.getItem(k)]);localStorage.setItem(k,JSON.stringify(v));}return true;}catch{for(const [k,v] of previous.reverse())try{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}catch{}return false;}};
+
+  const persistSets=()=>writeStorage([[setsStorageKey,namedSets],[profileStorageKey,profiles]]);
   const applyProfile=profile=>{if(!profile||typeof profile!=='object')return false;for(const field of profileFields)if(Object.prototype.hasOwnProperty.call(profile,field))state[field]=profile[field];state.neonStyle=state.pentagramSelected?'pentagram':'soft';state.neonEnabled=state.neonSelected||state.pentagramSelected;return true;};
  let binding=null,disposed=false,lastError='',draws=0,lastPaintAt=0,lastPaintX=NaN,lastPaintY=NaN;
  let godModeDirty=false;
  const announceChange=()=>{godModeDirty=true;window.dispatchEvent(new CustomEvent('shacal-godmode-change',{detail:{dirty:true}}));};
- const saveGodMode=()=>{try{localStorage.setItem(key,JSON.stringify(state));godModeDirty=false;window.dispatchEvent(new CustomEvent('shacal-godmode-saved',{detail:{dirty:false}}));return true;}catch{return false;}};
+ const saveGodMode=()=>{const nextProfiles={...profiles};if(activeProfileKey)nextProfiles[activeProfileKey]={...profiles[activeProfileKey],...profileSnapshot(),characterName:activeCharacterName,savedAt:Date.now()};if(!writeStorage([[profileStorageKey,nextProfiles],[key,state]]))return false;profiles=nextProfiles;godModeDirty=false;window.dispatchEvent(new CustomEvent('shacal-godmode-saved',{detail:{dirty:false}}));return true;};
  const root=document.createElement('div');root.id='shacal-aura-test';
  root.innerHTML=`<style>
  #shacal-aura-test{font:13px/1.5 Arial,sans-serif;color:#eef5ff;position:relative;right:auto;bottom:auto;z-index:auto;width:100%;height:100%}
@@ -160,9 +161,8 @@
  <label>Zanikanie (sekundy) <output data-value="trailLife"></output><input type="range" min="1" max="8" step="0.5" data-key="trailLife"></label>
  <label>Rozmiar <output data-value="trailSize"></output><input type="range" min="0.5" max="2" step="0.1" data-key="trailSize"></label>
  <label>Intensywność <output data-value="trailOpacity"></output><input type="range" min="0.1" max="1" step="0.05" data-key="trailOpacity"></label>
-   </div><div class="gm-party-controls"><strong>Disco Polo</strong><button type="button" data-disco="disco" aria-pressed="false">Disco</button><button type="button" data-disco="haloDisco" aria-pressed="false">Polo</button><button type="button" data-music disabled>START</button></div><small data-status>Oczekiwanie na postać…</small><small>Ustawienia zapisują się od razu.</small></section>`;
+   </div><div class="gm-party-controls"><strong>Disco Polo</strong><button type="button" data-disco="disco" aria-pressed="false">Disco</button><button type="button" data-disco="haloDisco" aria-pressed="false">Polo</button><button type="button" data-music disabled>START</button></div><small data-status>Oczekiwanie na postać…</small><small>Zmiany zatwierdź przyciskiem ZAPISZ ZMIANY.</small></section>`;
  const godHost=document.getElementById('shacal-godmode-host');(godHost||document.body).append(root);
- if(!godHost){const mover=setInterval(()=>{const host=document.getElementById('shacal-godmode-host');if(host){host.append(root);clearInterval(mover);}},1000);}
   const panel=root.querySelector('section'),status=root.querySelector('[data-status]');
    const profileCharacter=root.querySelector('[data-profile-character]'),profileStatus=root.querySelector('[data-profile-status]'),profileNameInput=root.querySelector('[data-profile-name]'),profileList=root.querySelector('[data-profile-list]'),profileSaveButton=root.querySelector('[data-profile-save]'),profileLoadButton=root.querySelector('[data-profile-load]'),profileDeleteButton=root.querySelector('[data-profile-delete]'),profileLimit=root.querySelector('[data-profile-limit]');
    const refreshProfileUi=()=>{
@@ -190,11 +190,12 @@
  for(const tabButton of root.querySelectorAll('[data-gm-tab]'))tabButton.onclick=()=>selectGmTab(tabButton.dataset.gmTab);
  selectGmTab('aura');
  const partyControls=root.querySelector('.gm-party-controls'),musicButton=partyControls.querySelector('[data-music]');
- let partyMover=0;
+
  const movePartyControls=()=>{const host=document.getElementById('sg-godmode-party-host');if(host&&partyControls.parentElement!==host)host.append(partyControls);};
- movePartyControls();partyMover=setInterval(movePartyControls,500);
+ movePartyControls();
  let music=null,playing=false,playToken=0;
- const canPlay=()=>state.enabled&&state.neonEnabled&&state.halo&&state.disco&&state.rgb&&state.haloDisco&&state.haloRgb;
+ const moduleEnabled=()=>{const settings=window.ShacalRuntime?.context?.settings;return !window.ShacalRuntime||(!!settings&&settings.addon_godmode!==false&&settings.godModeEnabled!==false);};
+ const canPlay=()=>moduleEnabled()&&state.enabled&&state.neonEnabled&&state.halo&&state.disco&&state.rgb&&state.haloDisco&&state.haloRgb;
  function stopMusic(){playToken++;playing=false;if(music){music.pause();music.currentTime=0;}musicButton.textContent='START';}
  musicButton.onclick=async()=>{
   if(playing){stopMusic();return;}
@@ -206,6 +207,7 @@
   const syncColorControls=()=>{
   musicButton.disabled=!canPlay();
   if(!canPlay()&&playing)stopMusic();
+  lastPaintAt=0;
    const neonRgb=root.querySelector('[data-key="rgb"]'),neonMulti=root.querySelector('[data-key="rgbMulti"]');
    const haloRgb=root.querySelector('[data-key="haloRgb"]'),haloMulti=root.querySelector('[data-key="haloRgbMulti"]');
    const trailRgb=root.querySelector('[data-key="trailRgb"]'),trailMulti=root.querySelector('[data-key="trailRgbMulti"]');
@@ -267,17 +269,18 @@
    if(!name)name=String(window.prompt('Nazwa zapisywanego setu:',activeCharacterName+' — set')||'').trim();
    if(!name){profileMessage('Podaj nazwę setu.');return;}
    const setId='set-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7);
+   const previousProfiles={...profiles};
    namedSets[setId]={...profileSnapshot(),name,characterName:activeCharacterName,savedAt:Date.now()};
    profiles[activeProfileKey]={...profileSnapshot(),characterName:activeCharacterName,setId,setName:name,savedAt:Date.now()};
-   profileNameInput.value='';
-   profileMessage(persistSets()&&persistProfiles()?'Zapisano set „'+name+'”.':'Nie udało się zapisać setu.');
+   if(!persistSets()){delete namedSets[setId];profiles=previousProfiles;profileMessage('Nie udało się zapisać setu. Spróbuj ponownie.');refreshProfileUi();return;}
+   profileNameInput.value='';profileMessage('Zapisano set „'+name+'”.');
    refreshProfileUi();
   };
   const loadCharacterProfile=()=>{
    const selectedKey=profileList.value;
    if(!selectedKey||!namedSets[selectedKey]){profileMessage('Wybierz zapisany set z listy.');return;}
    const selectedSet=namedSets[selectedKey];applyProfile(selectedSet);syncColorControls();announceChange();
-   if(activeProfileKey){profiles[activeProfileKey]={...profileSnapshot(),characterName:activeCharacterName,setId:selectedKey,setName:String(selectedSet.name||selectedKey),savedAt:Date.now()};persistProfiles();}
+   if(activeProfileKey){profiles[activeProfileKey]={...profileSnapshot(),characterName:activeCharacterName,setId:selectedKey,setName:String(selectedSet.name||selectedKey),savedAt:Date.now()};}
    profileMessage('Wczytano set: '+String(selectedSet.name||selectedKey)+'.');refreshProfileUi();
   };
   const deleteCharacterProfile=()=>{
@@ -285,9 +288,10 @@
    if(!selectedKey||!namedSets[selectedKey]){profileMessage('Wybierz set do usunięcia.');return;}
    const selectedSet=namedSets[selectedKey],name=String(selectedSet.name||selectedKey);
    if(!window.confirm(`Usunąć set „${name}”?`))return;
+   const previousProfiles=JSON.parse(JSON.stringify(profiles));
    delete namedSets[selectedKey];
    for(const profile of Object.values(profiles))if(profile?.setId===selectedKey){delete profile.setId;delete profile.setName;}
-   const ok=persistSets()&&persistProfiles();profileMessage(ok?'Usunięto set „'+name+'”.':'Nie udało się usunąć setu.');refreshProfileUi();
+   const ok=persistSets();if(!ok){namedSets[selectedKey]=selectedSet;profiles=previousProfiles;}profileMessage(ok?'Usunięto set „'+name+'”.':'Nie udało się usunąć setu.');refreshProfileUi();
   };
   profileSaveButton.onclick=saveCharacterProfile;
   profileLoadButton.onclick=loadCharacterProfile;
@@ -301,45 +305,12 @@
   syncColorControls();
   announceChange();
  };
- function drawFootprints(g,hero){
-  if(!state.trail){footprints=[];lastStep=null;return;}
-  const rx=hero.rx,ry=hero.ry,map=window.Engine?.map,mapId=map?.d?.id;
-  if(!Number.isFinite(rx)||!Number.isFinite(ry))return;
-  const now=performance.now()/1000;
-  if(trailMap!==map||trailMapId!==mapId||trailHero!==hero){footprints=[];lastStep=null;trailMap=map;trailMapId=mapId;trailHero=hero;}
-  footprints=footprints.filter(step=>now-step.time<state.trailLife);
-  if(!lastStep)lastStep={x:rx,y:ry};
-  const dx=rx-lastStep.x,dy=ry-lastStep.y,distance=Math.hypot(dx,dy);
-  if(distance>3){footprints=[];lastStep={x:rx,y:ry};}
-  else if(distance>=.38){
-   const nx=dx/distance,ny=dy/distance,angle=Math.atan2(dy,dx)+Math.PI/2;
-   const count=Math.min(8,Math.floor(distance/.38));
-   for(let i=0;i<count;i++){
-    lastStep={x:lastStep.x+nx*.38,y:lastStep.y+ny*.38};
-    footprints.push({x:lastStep.x-ny*.1*stepSide,y:lastStep.y+nx*.1*stepSide,cx:lastStep.x,cy:lastStep.y,angle,time:now});stepSide*=-1;
-   }
-   if(footprints.length>64)footprints.splice(0,footprints.length-64);
-  }
-  if(state.trailShape==='slime'){
-   g.save();try{
-    g.lineCap='round';g.lineJoin='round';
-    for(let i=1;i<footprints.length;i++){
-     const prev=footprints[i-1],step=footprints[i];
-     const fade=Math.pow(Math.max(0,1-(now-prev.time)/state.trailLife),1.5);
-      const tint=state.trailRgb?`hsl(${(step.time*100+(state.trailRgbMulti?i*48:0))%360},100%,65%)`:state.trailColor;
-     g.beginPath();g.moveTo((prev.cx-rx)*32,(prev.cy-ry)*32);g.lineTo((step.cx-rx)*32,(step.cy-ry)*32);
-     g.strokeStyle=tint;g.shadowColor=tint;g.shadowBlur=3;g.lineWidth=6*state.trailSize;g.globalAlpha=state.trailOpacity*fade*.45;g.stroke();
-     g.shadowBlur=0;g.lineWidth=1.3*state.trailSize;g.strokeStyle='#d8fff1';g.globalAlpha=state.trailOpacity*fade*.35;g.stroke();
-    }
-   }finally{g.restore();}
-   return;
-  }
-  for(let footprintIndex=0;footprintIndex<footprints.length;footprintIndex++){
-   const step=footprints[footprintIndex];
-   g.save();try{
-    g.translate((step.x-rx)*32,(step.y-ry)*32);g.rotate(step.angle);g.scale(state.trailSize,state.trailSize);
-    const color=state.trailRgb?`hsl(${(step.time*100+(state.trailRgbMulti?footprintIndex*48:0))%360},100%,65%)`:state.trailColor;
-    g.globalAlpha=state.trailOpacity*Math.pow(Math.max(0,1-(now-step.time)/state.trailLife),1.5)*clamp(hero.warShadowOpacity,0,1,1);
+ const trailStampCache=new Map();
+ function getTrailStamp(color){
+  const key=state.trailShape+'|'+state.trailSize+'|'+color;
+  if(trailStampCache.has(key))return trailStampCache.get(key);
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=48;
+  const g=canvas.getContext('2d');g.translate(24,24);g.scale(state.trailSize,state.trailSize);
     g.fillStyle=color;g.shadowColor=color;g.shadowBlur=state.trailShape==='foot'?4:2;
     const pad=(x,y,rx,ry,angle=0)=>{g.beginPath();g.ellipse(x,y,rx,ry,angle,0,Math.PI*2);g.fill();};
     if(state.trailShape==='cat'){
@@ -361,12 +332,41 @@
       g.beginPath();g.moveTo(x-.3,y-1.15);g.lineTo(x,y-2.05);g.lineTo(x+.3,y-1.15);g.closePath();g.fill();
      }
     }else{pad(0,-1.5,1.6,2.7);pad(0,2,1.2,1.4);}
+  if(trailStampCache.size>=128)trailStampCache.delete(trailStampCache.keys().next().value);
+  trailStampCache.set(key,canvas);return canvas;
+ }
+ function drawFootprints(g,hero){
+  if(!state.trail){footprints=[];lastStep=null;return;}
+  const rx=hero.rx,ry=hero.ry,map=window.Engine?.map,mapId=map?.d?.id;
+  if(!Number.isFinite(rx)||!Number.isFinite(ry))return;
+  const now=performance.now()/1000;
+  if(trailMap!==map||trailMapId!==mapId||trailHero!==hero){footprints=[];lastStep=null;trailMap=map;trailMapId=mapId;trailHero=hero;}
+  let expired=0;while(expired<footprints.length&&now-footprints[expired].time>=state.trailLife)expired++;if(expired)footprints.splice(0,expired);
+  if(!lastStep)lastStep={x:rx,y:ry};
+  const dx=rx-lastStep.x,dy=ry-lastStep.y,distance=Math.hypot(dx,dy);
+  if(distance>3){footprints=[];lastStep={x:rx,y:ry};}
+  else if(distance>=.38){
+   const nx=dx/distance,ny=dy/distance,angle=Math.atan2(dy,dx)+Math.PI/2;
+   const count=Math.min(8,Math.floor(distance/.38));
+   for(let i=0;i<count;i++){
+    lastStep={x:lastStep.x+nx*.38,y:lastStep.y+ny*.38};
+    footprints.push({x:lastStep.x-ny*.1*stepSide,y:lastStep.y+nx*.1*stepSide,angle,time:now,phase:(trailSequence++%15)*48});stepSide*=-1;
+   }
+   if(footprints.length>64)footprints.splice(0,footprints.length-64);
+  }
+  for(let footprintIndex=0;footprintIndex<footprints.length;footprintIndex++){
+   const step=footprints[footprintIndex];
+   g.save();try{
+    g.translate((step.x-rx)*32,(step.y-ry)*32);g.rotate(step.angle);
+    const color=state.trailRgb?`hsl(${(step.time*100+(state.trailRgbMulti?step.phase:0))%360},100%,65%)`:state.trailColor;
+    g.globalAlpha=state.trailOpacity*Math.pow(Math.max(0,1-(now-step.time)/state.trailLife),1.5)*clamp(hero.warShadowOpacity,0,1,1);
+    g.drawImage(getTrailStamp(color),-24,-24);
    }finally{g.restore();}
   }
  }
  function paint(g,hero,frontOnly=false){
   if(frontOnly&&(!state.halo||state.haloStyle!=='chakra'))return;
-  if(!state.enabled||disposed||!hero.imgLoaded||typeof g?.createRadialGradient!=='function')return;
+  if(!moduleEnabled()||!state.enabled||disposed||!hero.imgLoaded||typeof g?.createRadialGradient!=='function')return;
   const paintNow=performance.now();
   // The game redraws its character canvas every frame. Trails must be painted
   // on every draw call, otherwise the canvas is cleared between throttled paints
@@ -486,9 +486,12 @@
  function detach(){if(binding){if(binding.hero.drawIcon===binding.wrapper){if(binding.own)binding.hero.drawIcon=binding.original;else delete binding.hero.drawIcon;}if(binding.listWrapper&&binding.hero.getDrawableList===binding.listWrapper){if(binding.listOwn)binding.hero.getDrawableList=binding.listOriginal;else delete binding.hero.getDrawableList;}}binding=null;}
   function attach(){
    if(disposed)return;
+   const host=document.getElementById('shacal-godmode-host');if(host&&root.parentElement!==host)host.append(root);movePartyControls();
    const hero=window.Engine?.hero;
    activateCharacterProfile(hero);
-   if(binding?.hero===hero){status.textContent=lastError?'Aura: '+lastError:draws?'Aura aktywna · ustawienia zapisane':'Oczekiwanie na rysowanie postaci…';return;}
+   if(!moduleEnabled()||!state.enabled){footprints=[];lastStep=null;lastPaintAt=0;if(playing)stopMusic();}
+   musicButton.disabled=!canPlay();
+   if(binding?.hero===hero){const message=lastError?'Aura: '+lastError:draws?'Aura aktywna · ustawienia zapisane':'Oczekiwanie na rysowanie postaci…';if(status.textContent!==message)status.textContent=message;return;}
   detach();draws=0;
   if(!hero||typeof hero.drawIcon!=='function'||typeof hero.getCharacterLeft!=='function'||typeof hero.getCharacterTop!=='function'){status.textContent='Oczekiwanie na funkcje rysowania postaci…';return;}
   const original=hero.drawIcon,own=Object.hasOwn(hero,'drawIcon');
@@ -503,7 +506,7 @@
    const listOriginal=hero.getDrawableList,listOwn=Object.hasOwn(hero,'getDrawableList');
    function listWrapper(...args){
     const list=Reflect.apply(listOriginal,this,args);
-    if(disposed||this!==hero||!state.enabled||(!state.neonEnabled&&!state.halo)||!state.overrideNative||!Array.isArray(list))return list;
+    if(disposed||this!==hero||!moduleEnabled()||!state.enabled||(!state.neonEnabled&&!state.halo)||!state.overrideNative||!Array.isArray(list))return list;
     const effects=[hero.matchmakingChampionAura,hero.wanted,hero.whoIsHereGlow].filter(Boolean);
     return list.filter(item=>!effects.includes(item));
    }
@@ -511,7 +514,7 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.7.0',save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,deleteProfile:deleteCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);clearInterval(partyMover);partyControls.remove();detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.8.0',save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,deleteProfile:deleteCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);trailStampCache.clear();partyControls.remove();detach();root.remove();}};
 })();
 
 
