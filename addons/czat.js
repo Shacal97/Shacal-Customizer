@@ -499,9 +499,19 @@ ctx.getLegendaryChatDiagnostics = function getLegendaryChatDiagnostics() {
             [/\bpierdolony\b/giu, 'krucilony'], [/\bpierdol\b/giu, 'krucil'],
             [/\bzajebisty\b/giu, 'zajrucisty'], [/\bzajebiście\b/giu, 'zajruciście'], [/\bzajebiscie\b/giu, 'zajruciscie'],
             [/\bjebany\b/giu, 'kruciany'], [/\bjebać\b/giu, 'krucić'], [/\bjebac\b/giu, 'krucic'],
-            [/\bkurwa\b/giu, 'kruci'], [/\bkurwą\b/giu, 'krucią'], [/\bkurwie\b/giu, 'krucie'], [/\bkurwiarz\b/giu, 'kruciarz'],
-            [/\bchujowy\b/giu, 'kruciowy'], [/\bchuj\b/giu, 'kruci'], [/\bgówniany\b/giu, 'kruciany'], [/\bgowniany\b/giu, 'kruciany'],
-            [/\bgówno\b/giu, 'krucio'], [/\bgowno\b/giu, 'krucio'], [/\bpizda\b/giu, 'krucia']
+            [/\bkurwami?\b/giu, 'kruciami'], [/\bkurw(a|ę|e|y|ą|om|ach|ami)?\b/giu, 'kruci'],
+            [/\bdziwk(ą|e|i|o|om|ami)?\b/giu, 'krucw'],
+            [/\bchuj(owy|owa|owe|owi|em|a|u|e|ami)?\b/giu, 'kruci'],
+            [/\bpizd(ą|e|y|o|om|ami)?\b/giu, 'krucia'],
+            [/\bgówn(iany|iana|iane|i|em|a|o|y|ą|om|ami)?\b/giu, 'krucio'], [/\bgown(iany|iana|iane|i|em|a|o|y|ą|om|ami)?\b/giu, 'krucio'],
+            [/\b(huje|hujem|huj|hujowy|hujowa|hujowe)\b/giu, 'kruci'],
+            [/\b(pierdolenie|pierdolenia|pierdoleni|pierdolona|pierdolone|pierdolonego|pierdolonym)\b/giu, 'krucilenie'],
+            [/\b(jebanie|jebania|jebany|jebana|jebane|jebanych|jebanym)\b/giu, 'krucowanie'],
+            [/\b(suk(ą|a|i|ę|om|ami))\b/giu, 'krucą'], [/\b(skurw(iel|ielu|iony|iona|ione|ysyn))\b/giu, 'skuruc'],
+            [/\bfiut(ą|a|em|y|ach)?\b/giu, 'kruciut'], [/\bdebil(ę|em|a|i|ny|na|ne)?\b/giu, 'krucil'],
+            [/\bidiot(ą|a|ę|y|yczny|yczna|yczne)?\b/giu, 'krucil'],
+            [/\b(pedał|pedal|pedałem|pedalem|pedały|pedaly)\b/giu, 'kruc'],
+            [/\b(gówno|gowno)\b/giu, 'krucio'], [/\bpizda\b/giu, 'krucia']
         ];
         return replacements.reduce((text, [pattern, replacement]) => text.replace(pattern, match => {
             if (match === match.toUpperCase()) return replacement.toUpperCase();
@@ -536,7 +546,10 @@ ctx.installChatProfanityInput = function installChatProfanityInput() {
                 if (sanitized === value) return;
                 const start = input.selectionStart, end = input.selectionEnd;
                 if (editable) input.textContent = sanitized; else input.value = sanitized;
-                input.setSelectionRange?.(Math.min(start ?? sanitized.length, sanitized.length), Math.min(end ?? sanitized.length, sanitized.length));
+                const shift = sanitized.length - value.length;
+                const nextStart = Math.min(Math.max(0, (start ?? value.length) + shift), sanitized.length);
+                const nextEnd = Math.min(Math.max(0, (end ?? value.length) + shift), sanitized.length);
+                input.setSelectionRange?.(nextStart, nextEnd);
                 input.dispatchEvent(new Event('input', {bubbles:true}));
             };
             input.addEventListener('input', clean, true);
