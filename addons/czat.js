@@ -521,6 +521,25 @@ ctx.installChatProfanityFilter = function installChatProfanityFilter() {
         const controller = ctx.getShacalGameEngine()?.chatController;
         if (controller) controller.getChatInputWrapper = patched;
     };
+ctx.installChatProfanityInput = function installChatProfanityInput() {
+        document.querySelectorAll('.chat-input-wrapper textarea, .chat-input-wrapper input, .chat-input-wrapper [contenteditable="true"], textarea.chat-input, input.chat-input').forEach(input => {
+            if (input.__shacalProfanityInput) return;
+            input.__shacalProfanityInput = true;
+            const clean = () => {
+                if (!ctx.addonFeatureEnabled('chatProfanityFilterEnabled')) return;
+                const editable = input.matches('[contenteditable="true"]');
+                const value = editable ? String(input.textContent || '') : String(input.value || '');
+                const sanitized = ctx.sanitizeChatMessage(value);
+                if (sanitized === value) return;
+                const start = input.selectionStart, end = input.selectionEnd;
+                if (editable) input.textContent = sanitized; else input.value = sanitized;
+                input.setSelectionRange?.(Math.min(start ?? sanitized.length, sanitized.length), Math.min(end ?? sanitized.length, sanitized.length));
+                input.dispatchEvent(new Event('input', {bubbles:true}));
+            };
+            input.addEventListener('input', clean, true);
+            input.addEventListener('keydown', clean, true);
+        });
+    };
 ctx.INVENTORY_ITEM_SELECTOR = [
         '.inventory-item', '.inventory-grid .item', '.inventory_wrapper .item',
         '.inventory .item', '.equipment-wrapper .item'
@@ -542,6 +561,7 @@ ctx.legendaryChatTimer = null;
 ctx.legendaryChatScope = '';
 ctx.legendaryChatLastStatus = 'Gotowy do sprawdzenia ekwipunku.';
 ctx.legendaryChatPrimedLoot = new WeakMap();
-ctx.chatProfanityTimer = setInterval(() => { try { ctx.installChatProfanityFilter(); } catch {} }, 1000);
-ctx.installChatProfanityFilter();}});
+ctx.chatProfanityTimer = setInterval(() => { try { ctx.installChatProfanityFilter(); ctx.installChatProfanityInput(); } catch {} }, 250);
+ctx.installChatProfanityFilter();
+ctx.installChatProfanityInput();}});
 })(window.ShacalRuntime);
