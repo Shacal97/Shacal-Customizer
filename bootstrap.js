@@ -1,12 +1,13 @@
-(function () {
+function shacalBootstrap(window, privilegedRequest) {
+    const document=window.document;
     'use strict';
     if (window.top !== window.self || location.hostname !== 'solphyr.margonem.pl' || window.ShacalRuntime) return;
-    const base = new URL('.', document.currentScript.src);
+    const base = new URL('https://shacal97.github.io/Shacal-Customizer/');
     const parts = new Map();
     const ctx = Object.create(null);
     const runtime = window.ShacalRuntime = {
-        version: '6.10.3', state: 'loading', context: ctx,
-        request: window.__shacalRequest,
+        version: '6.11.1', state: 'loading', context: ctx,
+        request: privilegedRequest || window.__shacalRequest,
         registerPart(id, part) {
             if (this.state !== 'loading') throw Error('Rejestracja po uruchomieniu: ' + id);
             if (parts.has(id)) throw Error('Powtórzony moduł: ' + id);
@@ -57,9 +58,15 @@
         });
     }
     (async () => {
-        const response = await fetch(new URL('manifest.json', base), {cache:'no-cache', signal:AbortSignal.timeout(20000)});
-        if (!response.ok) throw Error('Manifest: HTTP ' + response.status);
-        const manifest = await response.json();
+        let manifest;
+        try {
+            const response=await fetch(new URL('manifest.json',base),{cache:'no-cache',signal:AbortSignal.timeout(20000)});
+            if(!response.ok)throw Error('Manifest: HTTP '+response.status);
+            manifest=await response.json();
+        } catch(error) {
+            if(typeof runtime.request!=='function')throw error;
+            manifest=await new Promise((resolve,reject)=>runtime.request({method:'GET',url:new URL('manifest.json?v='+runtime.version,base).href,timeout:20000,onload:r=>{try{if(r.status!==200)throw Error('Manifest: HTTP '+r.status);resolve(JSON.parse(r.responseText));}catch(e){reject(e);}},onerror:()=>reject(Error('Nie udało się pobrać manifestu.')),ontimeout:()=>reject(Error('Przekroczono czas pobierania manifestu.'))}));
+        }
         if (!Array.isArray(manifest.scripts) || !Array.isArray(manifest.parts)) throw Error('Nieprawidłowy manifest.');
         if (manifest.version !== runtime.version) {
             if (/^\d+\.\d+\.\d+$/.test(manifest.version)) runtime.showUpdateNotice(manifest.version);
@@ -67,19 +74,16 @@
         }
         if (manifest.scripts.some(file => !/^(panel\.js|addons\/[a-z-]+\.js)$/.test(file))) throw Error('Nieprawidłowa lista dodatków.');
         // Scripts register executable factories. No concatenation or eval is used.
-        await Promise.all(manifest.scripts.map(file => loadScript(file, manifest.version)));
+        for (const file of manifest.scripts) await loadScript(file, manifest.version);
         if (parts.size !== manifest.parts.length || manifest.parts.some(id => !parts.has(id))) throw Error('Niekompletny zestaw dodatków.');
         for (const id of manifest.parts) parts.get(id).declare(ctx);
         runtime.state = 'starting';
         for (const id of manifest.parts) parts.get(id).init(ctx);
-        runtime.state = 'ready';
+        runtime.state = 'ready';window.__shacalLoading=false;
     })().catch(error => {
-        runtime.state = 'error';
+        runtime.state = 'error';window.__shacalLoading=false;runtime.error=String(error.message||error);
         console.error('[Shacal]', error);
     });
-})();
-
-
-
-
-
+}
+// Compatibility with already installed loaders that insert bootstrap.js as a script.
+if(typeof document!=='undefined'&&document.currentScript?.src?.startsWith('https://shacal97.github.io/Shacal-Customizer/bootstrap.js'))shacalBootstrap(window,window.__shacalRequest);
