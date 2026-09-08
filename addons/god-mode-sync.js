@@ -6,10 +6,15 @@
  let sent='',pending=null,lastWorld='',failures=0,lastSuccess=0;
  const api=()=>window.ShacalAuraTest;
  const status=text=>{const node=document.querySelector('[data-sync-status]');if(node&&node.textContent!==text)node.textContent=text;};
+ const explain=error=>{
+ const code=String(error?.message||'UNKNOWN');
+ const messages={INSTALLER_UPDATE_REQUIRED:'Zaktualizuj instalator Tampermonkey.',PROFILE_MODULE_LOADING:'Moduł sprawdzania profilu nie został załadowany.',PROFILE_RATE_LIMIT:'Margonem ograniczył odczyt profilu. Poczekam przed ponowieniem.',PROFILE_TIMEOUT:'Przekroczono czas odczytu profilu Margonem.',PROFILE_UNAVAILABLE:'Nie udało się pobrać profilu. Sprawdź uprawnienie Tampermonkey do www.margonem.pl.',PROFILE_FORMAT_CHANGED:'Pobrana strona nie zawiera oczekiwanej listy postaci.',PROFILE_REDIRECT:'Odczyt profilu przekierował na inną stronę.',CHARACTER_NOT_ON_PROFILE:'Nie znaleziono tej postaci na odczytanym profilu.',IDENTITY_UNAVAILABLE:'Nie udało się odczytać ID konta lub postaci.'};
+ return 'Zapis lokalny działa. '+(messages[code]||'Błąd synchronizacji: '+code.slice(0,160));
+ };
  async function request(body,controller){
   const timeout=setTimeout(()=>controller.abort(),12000);
   try{const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
-   if(!response.ok)throw Error('HTTP '+response.status);
+   if(!response.ok){const detail=await response.json().catch(()=>null);throw Error('HTTP '+response.status+(detail?.error?' / '+detail.error:''));}
    return await response.json();
   }finally{clearTimeout(timeout);}
  }
@@ -32,7 +37,7 @@
    if(result.saved!==true)throw Error('NOT_SAVED');
    sent=job.signature;if(pending===job)pending=null;
    status('Wygląd udostępniony innym graczom.');
-  }catch(error){if(!stopped&&error.name!=='AbortError')status('Zapis lokalny działa. Ponowię synchronizację.');}
+  }catch(error){if(!stopped&&error.name!=='AbortError')status(explain(error));}
   finally{pushing=false;pushController=null;}
  }
  async function pull(){
