@@ -4,6 +4,7 @@
  const endpoint='https://kfhggnkhntdragqqgtpi.supabase.co/functions/v1/god-mode-sync';
  let stopped=false,timer=null,pullController=null,pushController=null,pulling=false,pushing=false,ticking=false;
  let sent='',pending=null,lastWorld='',failures=0,lastSuccess=0;
+ let visibleSignature='',lastArrivalPull=0;
  const api=()=>window.ShacalAuraTest;
  const status=text=>{const node=document.querySelector('[data-sync-status]');if(node&&node.textContent!==text)node.textContent=text;};
  const explain=error=>{
@@ -45,6 +46,7 @@
   pulling=true;pullController=new AbortController();
   const world=location.hostname.split('.')[0];
   const ids=api().visibleOtherIds();
+  visibleSignature=ids.slice().sort().join(',');
   if(lastWorld!==world){api().clearRemote();lastWorld=world;}
   try{const result=await request({action:'pull',world,ids},pullController);
    if(stopped||document.hidden||!api()?.otherEffectsAllowed())return;
@@ -60,6 +62,13 @@
   try{if(!document.hidden){capture();await Promise.allSettled([push(),pull()]);}}
   finally{ticking=false;if(!stopped){clearTimeout(timer);timer=setTimeout(tick,Math.min(60000,10000*2**failures));}}
  }
+ function checkArrivals(){
+  if(stopped||document.hidden||!api()?.otherEffectsAllowed())return;
+  const signature=api().visibleOtherIds().slice().sort().join(',');
+  if(!lastSuccess||signature===visibleSignature||pulling||Date.now()-lastArrivalPull<1500||failures)return;
+  visibleSignature=signature;lastArrivalPull=Date.now();pull();
+ }
+ const arrivalTimer=setInterval(checkArrivals,500);
  function viewerChanged(event){
   if(!event.detail?.enabled){pullController?.abort();api()?.clearRemote();}
   else pull();
@@ -70,6 +79,6 @@
  addEventListener('shacal-godmode-viewer-change',viewerChanged);
  addEventListener('visibilitychange',visibility);
  addEventListener('online',saved);
- window.ShacalGodModeSync={dispose(){stopped=true;clearTimeout(timer);pullController?.abort();pushController?.abort();api()?.clearRemote();removeEventListener('shacal-godmode-saved',saved);removeEventListener('shacal-godmode-viewer-change',viewerChanged);removeEventListener('visibilitychange',visibility);removeEventListener('online',saved);}};
+ window.ShacalGodModeSync={dispose(){stopped=true;clearInterval(arrivalTimer);clearTimeout(timer);pullController?.abort();pushController?.abort();api()?.clearRemote();removeEventListener('shacal-godmode-saved',saved);removeEventListener('shacal-godmode-viewer-change',viewerChanged);removeEventListener('visibilitychange',visibility);removeEventListener('online',saved);}};
  timer=setTimeout(tick,1500);
 })();
