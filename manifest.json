@@ -1,13 +1,16 @@
 {
-  "version": "6.9.0",
+  "version": "6.10.0",
   "scripts": [
     "panel.js",
     "addons/glow.js",
     "addons/ramki-dymki.js",
     "addons/czat.js",
     "addons/wolacz.js",
-    "addons/przelogowanie.js"
-    ,"addons/god-mode.js"
+    "addons/przelogowanie.js",
+    "addons/god-mode.js",
+    "addons/god-mode-sync-core.js",
+    "addons/god-mode-profile.js",
+    "addons/god-mode-sync.js"
   ],
   "parts": [
     "core/start.js",
@@ -26,8 +29,3 @@
     "core/ui-v630.js"
   ]
 }
-
-
-
-
-

@@ -1,7 +1,7 @@
 // ==UserScript==
 // God Mode — Customizacja efektów wizualnych wokół postaci.
 // @namespace    shacal.aura.test
-// @version      0.8.0
+// @version      0.9.0
 // @description  Customizacja efektów wizualnych wokół postaci.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
@@ -14,7 +14,9 @@
  const key='shacalAuraTestV1',defaults={enabled:true,color:'#23e4cf',size:1,opacity:.65,speed:1,halo:true};
  let raw={};try{const saved=JSON.parse(localStorage.getItem(key));if(saved&&typeof saved==='object'&&!Array.isArray(saved))raw=saved;}catch{}
  const clamp=(v,min,max,fallback)=>Number.isFinite(Number(v))?Math.max(min,Math.min(max,Number(v))):fallback;
- const state={enabled:raw.enabled!==false,color:/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:defaults.color,size:clamp(raw.size,.5,2,1),opacity:clamp(raw.opacity,.1,1,.65),speed:clamp(raw.speed,0,2,1),halo:raw.halo!==false};
+ let state={enabled:raw.enabled!==false,color:/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:defaults.color,size:clamp(raw.size,.5,2,1),opacity:clamp(raw.opacity,.1,1,.65),speed:clamp(raw.speed,0,2,1),halo:raw.halo!==false};
+ // Viewer preference belongs to this browser, not to a character's visual set.
+ state.showOtherPlayersEffects=raw.showOtherPlayersEffects!==false;
  state.haloSize=clamp(raw.haloSize ?? state.size,.5,2,1);
  state.haloOpacity=clamp(raw.haloOpacity ?? state.opacity,.1,1,.65);
  state.rgb=raw.rgb===true;
@@ -74,7 +76,7 @@
 
   const persistSets=()=>writeStorage([[setsStorageKey,namedSets],[profileStorageKey,profiles]]);
   const applyProfile=profile=>{if(!profile||typeof profile!=='object')return false;for(const field of profileFields)if(Object.prototype.hasOwnProperty.call(profile,field))state[field]=profile[field];state.neonStyle=state.pentagramSelected?'pentagram':'soft';state.neonEnabled=state.neonSelected||state.pentagramSelected;return true;};
- let binding=null,disposed=false,lastError='',draws=0,lastPaintAt=0,lastPaintX=NaN,lastPaintY=NaN;
+ let binding=null,disposed=false,lastError='',draws=0;
  let godModeDirty=false;
  const announceChange=()=>{godModeDirty=true;window.dispatchEvent(new CustomEvent('shacal-godmode-change',{detail:{dirty:true}}));};
  const saveGodMode=()=>{const nextProfiles={...profiles};if(activeProfileKey)nextProfiles[activeProfileKey]={...profiles[activeProfileKey],...profileSnapshot(),characterName:activeCharacterName,savedAt:Date.now()};if(!writeStorage([[profileStorageKey,nextProfiles],[key,state]]))return false;profiles=nextProfiles;godModeDirty=false;window.dispatchEvent(new CustomEvent('shacal-godmode-saved',{detail:{dirty:false}}));return true;};
@@ -125,6 +127,8 @@
   </style><section><h3>Aura postaci</h3>
   <label><input type="checkbox" data-key="enabled"> Włącz aurę</label>
   <label><input type="checkbox" data-key="overrideNative"> Zastąp poświaty gry</label>
+  <label><input type="checkbox" role="switch" data-key="showOtherPlayersEffects"> Pokazuj efekty innych graczy</label>
+  <small data-sync-status aria-live="polite">Wygląd udostępnisz przyciskiem Zapisz zmiany.</small>
   <div class="gm-profile-bar"><strong data-profile-character>Postać: oczekiwanie…</strong><small data-profile-status>Profil zostanie przypisany do aktualnej postaci.</small></div>
   <nav class="gm-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-gm-tab="aura">Aura</button><button type="button" role="tab" aria-selected="false" data-gm-tab="neon">Neon</button><button type="button" role="tab" aria-selected="false" data-gm-tab="trails">Ślady</button><button type="button" role="tab" aria-selected="false" data-gm-tab="sets">Zapisane Sety</button></nav>
   <div class="gm-pane" data-gm-pane="sets"><h4>Zapisane Sety</h4><label>Nazwa nowego setu <input type="text" data-profile-name maxlength="40" placeholder="np. Pentagram różowy"></label><button type="button" data-profile-save>ZAPISZ SET</button><details class="gm-profile-sets" open><summary>LISTA SETÓW</summary><select data-profile-list aria-label="Zapisane sety"><option value="">Brak zapisanych setów</option></select></details><button type="button" data-profile-load>WCZYTAJ WYBRANY SET</button><button type="button" data-profile-delete>USUŃ WYBRANY SET</button><small data-profile-limit>Limit: 0/15 setów</small></div>
@@ -195,6 +199,14 @@
  movePartyControls();
  let music=null,playing=false,playToken=0;
  const moduleEnabled=()=>{const settings=window.ShacalRuntime?.context?.settings;return !window.ShacalRuntime||(!!settings&&settings.addon_godmode!==false&&settings.godModeEnabled!==false);};
+ const otherEffectsAllowed=()=>!disposed&&moduleEnabled()&&state.showOtherPlayersEffects;
+ let previousOtherEffectsAllowed;
+ const notifyOtherEffectsPreference=()=>{
+  const enabled=otherEffectsAllowed();
+  if(enabled===previousOtherEffectsAllowed)return;
+  previousOtherEffectsAllowed=enabled;
+  window.dispatchEvent(new CustomEvent('shacal-godmode-viewer-change',{detail:{enabled}}));
+ };
  const canPlay=()=>moduleEnabled()&&state.enabled&&state.neonEnabled&&state.halo&&state.disco&&state.rgb&&state.haloDisco&&state.haloRgb;
  function stopMusic(){playToken++;playing=false;if(music){music.pause();music.currentTime=0;}musicButton.textContent='START';}
  musicButton.onclick=async()=>{
@@ -207,7 +219,7 @@
   const syncColorControls=()=>{
   musicButton.disabled=!canPlay();
   if(!canPlay()&&playing)stopMusic();
-  lastPaintAt=0;
+  
    const neonRgb=root.querySelector('[data-key="rgb"]'),neonMulti=root.querySelector('[data-key="rgbMulti"]');
    const haloRgb=root.querySelector('[data-key="haloRgb"]'),haloMulti=root.querySelector('[data-key="haloRgbMulti"]');
    const trailRgb=root.querySelector('[data-key="trailRgb"]'),trailMulti=root.querySelector('[data-key="trailRgbMulti"]');
@@ -259,7 +271,7 @@
       if(state.pentagramSelected){state.neonSelected=false;state.neonStyle='pentagram';state.neonEnabled=true;}
       else if(!state.neonSelected)state.neonEnabled=false;
      }
-     if(output)output.textContent=formatOutput(k,state[k]);syncColorControls();announceChange();};
+     if(output)output.textContent=formatOutput(k,state[k]);syncColorControls();announceChange();notifyOtherEffectsPreference();};
  }
   syncColorControls();
   const saveCharacterProfile=()=>{
@@ -367,18 +379,9 @@
  function paint(g,hero,frontOnly=false){
   if(frontOnly&&(!state.halo||state.haloStyle!=='chakra'))return;
   if(!moduleEnabled()||!state.enabled||disposed||!hero.imgLoaded||typeof g?.createRadialGradient!=='function')return;
-  const paintNow=performance.now();
-  // The game redraws its character canvas every frame. Trails must be painted
-  // on every draw call, otherwise the canvas is cleared between throttled paints
-  // and the footprints visibly blink.
-  if(!frontOnly&&!state.trail&&lastPaintAt&&paintNow-lastPaintAt<33)return;
+  // The game clears this canvas each frame: redraw every active effect on every call.
   const x=hero.getCharacterLeft()+hero.fw/2,y=hero.getCharacterTop()+hero.fh-9;
   if(!Number.isFinite(x)||!Number.isFinite(y))return;
-  if(!frontOnly){
-   const moved=Math.abs(x-lastPaintX)+Math.abs(y-lastPaintY)>0.1;
-   if(!moved&&!state.trail&&lastPaintAt&&paintNow-lastPaintAt<100)return;
-   lastPaintAt=paintNow;lastPaintX=x;lastPaintY=y;
-  }
   const seconds=performance.now()/1000;
   const t=seconds*state.speed, pulse=state.speed? .9+.1*Math.sin(t*2.4):1;
   const color=(opacity,halo,phase=0)=>{
@@ -483,13 +486,86 @@
    draws++;
   }finally{g.restore();}
  }
+
+ // Reuse the same painter synchronously, with independent trail state per actor.
+ const remoteBindings=new Map();
+ let remoteLooks=new Map();
+ const identityNumber=value=>/^[1-9][0-9]{0,19}$/.test(String(value??''))?String(value):null;
+ const syncIdentity=()=>{
+  const d=window.Engine?.hero?.d||{},hero=window.Engine?.hero;
+  const character_id=identityNumber(d.id??hero?.id);
+  const cookie=document.cookie.match(/(?:^|;\s*)user_id=([0-9]+)(?:;|$)/)?.[1];
+  const account_id=identityNumber(d.account??d.aid??hero?.accountId??cookie);
+  return character_id&&account_id?{world:location.hostname.split('.')[0],character_id,account_id}:null;
+ };
+ const savedSyncSnapshot=()=>{
+  const identity=syncIdentity();if(!identity||!activeProfileKey)return null;
+  try{const saved=JSON.parse(localStorage.getItem(profileStorageKey)||'{}')[activeProfileKey];
+   if(!saved)return null;
+   const appearance=Object.fromEntries(profileFields.map(k=>[k,saved[k]]));
+   appearance.enabled=moduleEnabled()&&appearance.enabled;
+   return {...identity,appearance};
+  }catch{return null;}
+ };
+ const visibleOthers=()=>{
+  try{const list=window.Engine?.others?.getDrawableList?.();
+   return (Array.isArray(list)?list:[]).filter(actor=>actor!==window.Engine?.hero&&identityNumber(actor?.d?.id??actor?.id)&&typeof actor.drawIcon==='function').slice(0,24);
+  }catch{return [];}
+ };
+ function detachRemote(actor,b){
+  if(actor.drawIcon===b.wrapper){if(b.own)actor.drawIcon=b.original;else delete actor.drawIcon;}
+  if(actor.getDrawableList===b.listWrapper){if(b.listOwn)actor.getDrawableList=b.listOriginal;else delete actor.getDrawableList;}
+  remoteBindings.delete(actor);
+ }
+ function clearRemote(){for(const [actor,b] of remoteBindings)detachRemote(actor,b);remoteLooks.clear();}
+ function paintRemote(g,actor,b,front){
+  if(!otherEffectsAllowed())return;
+  const local=[state,trailSequence,footprints,lastStep,stepSide,trailMap,trailMapId,trailHero];
+  [state,trailSequence,footprints,lastStep,stepSide,trailMap,trailMapId,trailHero]=[b.appearance,...b.trails];
+  try{paint(g,actor,front);}catch{}finally{
+   b.trails=[trailSequence,footprints,lastStep,stepSide,trailMap,trailMapId,trailHero];
+   [state,trailSequence,footprints,lastStep,stepSide,trailMap,trailMapId,trailHero]=local;
+  }
+ }
+ function refreshRemoteBindings(){
+  if(!otherEffectsAllowed()){clearRemote();return;}
+  const visible=new Set(visibleOthers());
+  for(const [actor,b] of remoteBindings)if(!visible.has(actor)||!remoteLooks.has(String(actor.d?.id??actor.id)))detachRemote(actor,b);
+  for(const actor of visible){
+   const appearance=remoteLooks.get(String(actor.d?.id??actor.id));if(!appearance?.enabled)continue;
+   const existing=remoteBindings.get(actor);
+   if(existing){existing.appearance=appearance;continue;}
+   if(typeof actor.getCharacterLeft!=='function'||typeof actor.getCharacterTop!=='function')continue;
+   const b={appearance,trails:[0,[],null,1,null,null,null],original:actor.drawIcon,own:Object.hasOwn(actor,'drawIcon')};
+   b.wrapper=function(...args){if(this===actor)paintRemote(args[0],actor,b,false);const result=Reflect.apply(b.original,this,args);if(this===actor)paintRemote(args[0],actor,b,true);return result;};
+   actor.drawIcon=b.wrapper;
+   if(typeof actor.getDrawableList==='function'){
+    b.listOriginal=actor.getDrawableList;b.listOwn=Object.hasOwn(actor,'getDrawableList');
+    b.listWrapper=function(...args){const list=Reflect.apply(b.listOriginal,this,args);if(this!==actor||!otherEffectsAllowed()||!b.appearance.overrideNative||!b.appearance.enabled||(!b.appearance.neonEnabled&&!b.appearance.halo)||!Array.isArray(list))return list;const excluded=[actor.matchmakingChampionAura,actor.wanted,actor.whoIsHereGlow].filter(Boolean);return list.filter(x=>!excluded.includes(x));};actor.getDrawableList=b.listWrapper;
+   }
+   remoteBindings.set(actor,b);
+  }
+ }
+ function setRemoteLooks(rows){
+  if(!otherEffectsAllowed()){clearRemote();return;}
+  const next=new Map();
+  for(const row of Array.isArray(rows)?rows.slice(0,24):[]){
+   try{const id=identityNumber(row.character_id),appearance=window.ShacalSyncCore?.validateAppearance(row.appearance);if(id&&appearance?.enabled)next.set(id,{...appearance,style:'soft'});}catch{}
+  }
+  remoteLooks=next;refreshRemoteBindings();
+ }
+ const viewerChanged=event=>{if(!event.detail?.enabled)clearRemote();};
+ window.addEventListener('shacal-godmode-viewer-change',viewerChanged);
+
  function detach(){if(binding){if(binding.hero.drawIcon===binding.wrapper){if(binding.own)binding.hero.drawIcon=binding.original;else delete binding.hero.drawIcon;}if(binding.listWrapper&&binding.hero.getDrawableList===binding.listWrapper){if(binding.listOwn)binding.hero.getDrawableList=binding.listOriginal;else delete binding.hero.getDrawableList;}}binding=null;}
   function attach(){
    if(disposed)return;
+   notifyOtherEffectsPreference();
+   refreshRemoteBindings();
    const host=document.getElementById('shacal-godmode-host');if(host&&root.parentElement!==host)host.append(root);movePartyControls();
    const hero=window.Engine?.hero;
    activateCharacterProfile(hero);
-   if(!moduleEnabled()||!state.enabled){footprints=[];lastStep=null;lastPaintAt=0;if(playing)stopMusic();}
+   if(!moduleEnabled()||!state.enabled){footprints=[];lastStep=null;if(playing)stopMusic();}
    musicButton.disabled=!canPlay();
    if(binding?.hero===hero){const message=lastError?'Aura: '+lastError:draws?'Aura aktywna · ustawienia zapisane':'Oczekiwanie na rysowanie postaci…';if(status.textContent!==message)status.textContent=message;return;}
   detach();draws=0;
@@ -514,7 +590,7 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.8.0',save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,deleteProfile:deleteCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;footprints=[];stopMusic();clearInterval(timer);trailStampCache.clear();partyControls.remove();detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.9.0',setRemoteLooks,clearRemote,visibleOtherIds:()=>visibleOthers().map(a=>String(a.d?.id??a.id)),savedSyncSnapshot,otherEffectsAllowed,save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,deleteProfile:deleteCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,showOtherPlayersEffects:state.showOtherPlayersEffects,remoteActors:remoteBindings.size,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;notifyOtherEffectsPreference();clearRemote();window.removeEventListener('shacal-godmode-viewer-change',viewerChanged);footprints=[];stopMusic();clearInterval(timer);trailStampCache.clear();partyControls.remove();detach();root.remove();}};
 })();
 
 

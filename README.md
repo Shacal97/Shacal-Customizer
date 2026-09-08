@@ -1,6 +1,3 @@
-# Shacal Customizer — Panel dodatków v6.9.0
+# Shacal Customizer — Panel dodatków
 
-**Instalacja / aktualizacja:** https://shacal97.github.io/Shacal-Customizer/install.user.js
-
-
-
+[Instalacja / aktualizacja](https://shacal97.github.io/Shacal-Customizer/install.user.js)

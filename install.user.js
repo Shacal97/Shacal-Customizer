@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Shacal — Panel dodatków
 // @namespace    shacal.margonem
-// @version      6.9.0
-// @description  Instalator panelu Shacal i pięciu dodatków pobieranych z repozytorium.
+// @version      6.10.0
+// @description  Instalator panelu Shacal i dodatków pobieranych z repozytorium.
 // @match        https://solphyr.margonem.pl/*
 // @run-at       document-end
 // @downloadURL  https://shacal97.github.io/Shacal-Customizer/install.user.js
@@ -10,6 +10,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
 // @sandbox      raw
+// @connect      www.margonem.pl
 // @connect      shacal97.github.io
 // @connect      fonts.googleapis.com
 // @connect      fonts.gstatic.com
@@ -23,7 +24,7 @@
     page.__shacalRequest = options => GM_xmlhttpRequest(options);
     const script = document.createElement('script');
             script.charset = 'utf-8';
-    script.src = 'https://shacal97.github.io/Shacal-Customizer/bootstrap.js?v=6.9.0';
+    script.src = 'https://shacal97.github.io/Shacal-Customizer/bootstrap.js?v=6.10.0';
     script.onerror = () => {
         page.__shacalLoading = false;
         console.error('[Shacal] Nie udało się pobrać panelu. Odśwież grę, aby spróbować ponownie.');
