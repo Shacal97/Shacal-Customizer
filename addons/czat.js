@@ -487,8 +487,11 @@ ctx.getLegendaryChatDiagnostics = function getLegendaryChatDiagnostics() {
                 hidPreview:String(ctx.readSafely(()=>item.raw.hid)||'').slice(0,90),
                 fields:Object.keys(item.raw).filter(key=>['id','hid','loc','stat','_cachedStats','d','data','item'].includes(key))}))},null,2);
     };},init(ctx){ctx.CHAT_EMOTICON_TOKEN_RE = /:([a-z0-9_+-]{2,32}):/gi;
-ctx.sanitizeChatMessage = function sanitizeChatMessage(value) {
-        if (!ctx.addonFeatureEnabled('chatProfanityFilterEnabled')) return String(value ?? '');
+    ctx.isChatProfanityEnabled = function isChatProfanityEnabled() {
+        return Boolean(ctx.settings?.chatProfanityFilterEnabled || ctx.panelDraftSettings?.chatProfanityFilterEnabled || ctx.addonFeatureEnabled('chatProfanityFilterEnabled'));
+    };
+    ctx.sanitizeChatMessage = function sanitizeChatMessage(value) {
+        if (!ctx.isChatProfanityEnabled()) return String(value ?? '');
         const replacements = [
             [/\bja[ \t]+pierdole\b/giu, 'ja krucilę'], [/\bja[ \t]+pierdolę\b/giu, 'ja krucilę'],
             [/\bwypierdalaj\b/giu, 'wykrucilaj'], [/\bspierdalaj\b/giu, 'skrucilaj'],
@@ -526,7 +529,7 @@ ctx.installChatProfanityInput = function installChatProfanityInput() {
             if (input.__shacalProfanityInput) return;
             input.__shacalProfanityInput = true;
             const clean = () => {
-                if (!ctx.addonFeatureEnabled('chatProfanityFilterEnabled')) return;
+                if (!ctx.isChatProfanityEnabled()) return;
                 const editable = input.matches('[contenteditable="true"]');
                 const value = editable ? String(input.textContent || '') : String(input.value || '');
                 const sanitized = ctx.sanitizeChatMessage(value);

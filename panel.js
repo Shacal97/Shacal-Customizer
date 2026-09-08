@@ -1,9 +1,9 @@
-/* Shacal core 6.11.4 */
+/* Shacal core 6.11.6 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.11.4';
+ctx.SHACAL_SCRIPT_VERSION = '6.11.6';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -3200,7 +3200,7 @@ declare(ctx){
     const keys={
         glow:['addon_glow','enabled','lootSoundEnabled','color1','color2','color3','glow1','glow2','glow3','opacity1','opacity2','opacity3','width1','width2','width3','pulse','effect','glowStyle','sound','volume','dropMode'],
         frames:['addon_frames','itemFramesEnabled','overrideGameItemFrames','itemFrameSet','frameCommon','frameUnique','frameHeroic','frameUpgraded','frameLegendary','upgradeBadgeEnabled','upgradeBadgeStyle','upgradeBadgeSyncRarityColor','itemTipsEnabled','itemTipSet','itemTipTextColors','itemTipOuterGlow','itemTipFont','tipUnique','tipHeroic','tipUpgraded','tipLegendary'],
-        chat:['addon_chat','chatAnnouncementsEnabled','chatMessageTemplate','chatEmoticonsEnabled'],
+        chat:['addon_chat','chatAnnouncementsEnabled','chatMessageTemplate','chatEmoticonsEnabled','chatProfanityFilterEnabled'],
         detector:['addon_detector','noticeHeros','noticeKolos','noticeTytan','heroCallMode','heroNoticeChannel','heroNoticesEnabled','heroNoticeTemplate'],
         e2:['addon_e2','e2TooltipsEnabled','e2MiniColor','e2MaxColor','e2ReloggerEnabled','e2SelectedOnly','e2Characters'],
         godmode:['addon_godmode','godModeEnabled']
