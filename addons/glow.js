@@ -654,21 +654,11 @@ ctx.ensureMapNeonCoreLines = function ensureMapNeonCoreLines( overlay ) {
         if (!(overlay instanceof Element)) {
             return [];
         }
-        const definitions = [ ['top', 'shacal-map-neon-core-top'], ['right', 'shacal-map-neon-core-right'], ['bottom', 'shacal-map-neon-core-bottom'],
-            ['left', 'shacal-map-neon-core-left'] ];
-        return definitions.map( ([edge, className]) => {
-                let line = overlay.querySelector(
-                        `.${className}`
-                    );
-                if (!line) {
-                    line = document.createElement('div');
-                    line.className =
-                        `shacal-map-neon-core ${className}`;
-                    line.dataset.shacalMapNeonEdge = edge;
-                    overlay.appendChild(line);
-                }
-                return line;
-            } );
+        // One closed border avoids independent edge offsets and overlapping corners.
+        overlay.querySelectorAll('.shacal-map-neon-core:not(.shacal-map-neon-core-ring)').forEach(node=>node.remove());
+        let ring=overlay.querySelector('.shacal-map-neon-core-ring');
+        if(!ring){ring=document.createElement('div');ring.className='shacal-map-neon-core shacal-map-neon-core-ring';overlay.appendChild(ring);}
+        return [ring];
     };
 ctx.setMapNeonCoreVisible = function setMapNeonCoreVisible( overlay, visible ) {
         ctx.ensureMapNeonCoreLines( overlay ).forEach(line => {

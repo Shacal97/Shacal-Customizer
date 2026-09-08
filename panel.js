@@ -1,9 +1,9 @@
-/* Shacal core 6.11.1 */
+/* Shacal core 6.11.3 */
 (function(runtime){'use strict';const unsafeWindow=window;const GM_xmlhttpRequest=runtime.request;
 runtime.registerPart("core/start.js", {declare(ctx){},init(ctx){ctx.VALID_FRAME_SETS = Object.freeze([1, 2, 3, 7, 8, 9, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 ctx.VALID_TIP_FONTS = Object.freeze(['default', 'cinzel', 'cormorant', 'vollkorn', 'spectral', 'bree', 'alegreya', 'playfair', 'grenze', 'lora', 'merriweather']);
 ctx.STORAGE_KEY = 'shacalLegendaryGlowSettings';
-ctx.SHACAL_SCRIPT_VERSION = '6.11.1';
+ctx.SHACAL_SCRIPT_VERSION = '6.11.3';
 ctx.SHACAL_UPDATE_URL = 'https://shacal97.github.io/Shacal-Customizer/install.user.js';
 ctx.defaultSettings = {
         e2TooltipsEnabled:true, e2MiniColor:'#29efce', e2MaxColor:'#b05cff', e2ReloggerEnabled:false, e2SelectedOnly:false, e2Characters:[],
@@ -15,7 +15,7 @@ ctx.defaultSettings = {
         frameCommon: true, frameUnique: true, frameHeroic: true, frameUpgraded: true, frameLegendary: true, upgradeBadgeEnabled: false, upgradeBadgeStyle: 1,
         upgradeBadgeSyncRarityColor: true, itemTipsEnabled: false, itemTipSet: 0, // 0 = synchronizuj z wybranym zestawem ramek
         itemTipTextColors: true, itemTipOuterGlow: true, itemTipFont: 'default', tipUnique: true, tipHeroic: true, tipUpgraded: true, tipLegendary: true,
-        chatAnnouncementsEnabled: false, chatMessageTemplate: 'O jejku patrzcie {ITEM} ale super!', chatEmoticonsEnabled: false, iconX: null, iconY: null
+        chatAnnouncementsEnabled: false, chatMessageTemplate: 'O jejku patrzcie {ITEM} ale super!', chatEmoticonsEnabled: false, chatProfanityFilterEnabled: false, iconX: null, iconY: null
     };
 ctx.DROP_MODE_NORMAL = 'normal';
 ctx.DROP_MODE_LEGENDARY = 'legendary';
@@ -37,7 +37,7 @@ runtime.registerPart("addon-registry.js", {declare(ctx){ctx.addonFeatureEnabled 
     };},init(ctx){ctx.SHACAL_ADDONS = [
         {id:'glow',name:'Notyficator',description:'Modyfikacja poświat, dźwięków i animacji przy zdobyczy legendarnego łupu.',features:['enabled','lootSoundEnabled']},
         {id:'frames',name:'Item Style',description:'Modyfikacja ramek przedmiotów, dodanie ikon ulepszeń przedmiotów, modyfikacja dymków przedmiotów.',features:['itemFramesEnabled','itemTipsEnabled','upgradeBadgeEnabled']},
-        {id:'chat',name:'Custom Chat',description:'Ogłoszenia legend i emotikony na czacie.',features:['chatAnnouncementsEnabled','chatEmoticonsEnabled']},
+        {id:'chat',name:'Custom Chat',description:'Ogłoszenia legend, emotikony i filtr czatu.',features:['chatAnnouncementsEnabled','chatEmoticonsEnabled','chatProfanityFilterEnabled']},
         {id:'detector',name:'Wołajka!',description:'Dodatek umożliwiający automatyczne powiadomienie o herosie/tytanie/kolosie na czacie globalnym lub klanowym.',features:['heroNoticesEnabled']},
         {id:'e2',name:'Relog Timer',description:'Dodatek synchronizujący minutnik z panelem przelogowania z opcją podświetlenia postaci przy respie e2.',features:['e2ReloggerEnabled']}
         ,{id:'godmode',name:'God Mode',description:'Customizacja efektów wizualnych wokół postaci.',features:['godModeEnabled']}
@@ -149,7 +149,7 @@ ctx.normalizeSettings = function normalizeSettings(rawSettings) {
                 : ctx.defaultSettings.chatMessageTemplate;
         [ 'itemFramesEnabled', 'overrideGameItemFrames', 'frameCommon', 'frameUnique', 'frameHeroic', 'frameUpgraded', 'frameLegendary', 'upgradeBadgeEnabled',
             'upgradeBadgeSyncRarityColor', 'itemTipsEnabled', 'itemTipTextColors', 'itemTipOuterGlow', 'tipUnique', 'tipHeroic', 'tipUpgraded', 'tipLegendary',
-            'chatAnnouncementsEnabled', 'chatEmoticonsEnabled' ].forEach(key => {
+            'chatAnnouncementsEnabled', 'chatEmoticonsEnabled', 'chatProfanityFilterEnabled' ].forEach(key => {
             normalized[key] = ctx.normalizeBoolean(normalized[key]);
         });
         return normalized;
@@ -1339,6 +1339,10 @@ ctx.createPanel = function createPanel() {
                         </div>
                         <input id="sg-chat-emoticons-enabled" type="checkbox" ${ctx.panelDraftSettings.chatEmoticonsEnabled ? 'checked' : ''}>
                     </div>
+                    <div class="master-row">
+                        <div class="master-copy"><span class="master-label">Filtr „kruci”</span><span class="hint">Podmienia wulgaryzmy przed wysłaniem wiadomości.</span></div>
+                        <input id="sg-chat-profanity-filter-enabled" type="checkbox" ${ctx.panelDraftSettings.chatProfanityFilterEnabled ? 'checked' : ''}>
+                    </div>
                     <div class="frames-note">
                         Dostępne emotki. Przewijaj listę kółkiem myszy lub paskiem po prawej stronie. Kliknięcie kafelka kopiuje kod do schowka. Osoba bez Shacal Customizera zobaczy kod tekstowy.
                     </div>
@@ -1802,6 +1806,10 @@ ctx.bindPanel = function bindPanel(panel) {
         };
         chatEmoticonsInput?.addEventListener('change', event => {
             ctx.panelDraftSettings.chatEmoticonsEnabled = event.target.checked;
+            ctx.markPanelDraftDirty(panel);
+        });
+        panel.querySelector('#sg-chat-profanity-filter-enabled')?.addEventListener('change', event => {
+            ctx.panelDraftSettings.chatProfanityFilterEnabled = event.target.checked;
             ctx.markPanelDraftDirty(panel);
         });
         chatEmoteCatalog?.addEventListener('click', async event => {
@@ -2783,41 +2791,11 @@ ctx.SHACAL_GAME_CSS = `            /*
              * lewa  -1 px
              */
             .shacal-map-neon-core {
-                position: absolute;
-                display: none;
-                pointer-events: none;
-                background: rgba(255,255,255,0.98);
-                box-shadow:
-                    0 0 2px rgba(255,255,255,.95),
-                    0 0 4px rgba(255,255,255,.58);
-            }
-
-            .shacal-map-neon-core-top {
-                left: 0;
-                right: 0;
-                top: -3px;
-                height: 2px;
-            }
-
-            .shacal-map-neon-core-right {
-                right: 0;
-                top: -3px;
-                width: 2px;
-                height: 100%;
-            }
-
-            .shacal-map-neon-core-bottom {
-                left: 0;
-                right: 0;
-                bottom: -2px;
-                height: 2px;
-            }
-
-            .shacal-map-neon-core-left {
-                left: -1px;
-                top: 0;
-                bottom: 0;
-                width: 2px;
+                position:absolute;display:none;pointer-events:none;
+                inset:-3px 0 -2px -1px;box-sizing:border-box;
+                border:2px solid rgba(255,255,255,.98);border-radius:2px;
+                background:transparent;
+                box-shadow:0 0 2px rgba(255,255,255,.95),0 0 4px rgba(255,255,255,.58),inset 0 0 2px rgba(255,255,255,.5);
             }
 
             .shacal-neon-item-frame {

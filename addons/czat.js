@@ -487,6 +487,40 @@ ctx.getLegendaryChatDiagnostics = function getLegendaryChatDiagnostics() {
                 hidPreview:String(ctx.readSafely(()=>item.raw.hid)||'').slice(0,90),
                 fields:Object.keys(item.raw).filter(key=>['id','hid','loc','stat','_cachedStats','d','data','item'].includes(key))}))},null,2);
     };},init(ctx){ctx.CHAT_EMOTICON_TOKEN_RE = /:([a-z0-9_+-]{2,32}):/gi;
+ctx.sanitizeChatMessage = function sanitizeChatMessage(value) {
+        if (!ctx.addonFeatureEnabled('chatProfanityFilterEnabled')) return String(value ?? '');
+        const replacements = [
+            [/\bja[ \t]+pierdole\b/giu, 'ja krucilę'], [/\bja[ \t]+pierdolę\b/giu, 'ja krucilę'],
+            [/\bwypierdalaj\b/giu, 'wykrucilaj'], [/\bspierdalaj\b/giu, 'skrucilaj'],
+            [/\bpierdolisz\b/giu, 'krucilisz'], [/\bpierdole\b/giu, 'krucilę'], [/\bpierdolę\b/giu, 'krucilę'],
+            [/\bpierdolony\b/giu, 'krucilony'], [/\bpierdol\b/giu, 'krucil'],
+            [/\bzajebisty\b/giu, 'zajrucisty'], [/\bzajebiście\b/giu, 'zajruciście'], [/\bzajebiscie\b/giu, 'zajruciscie'],
+            [/\bjebany\b/giu, 'kruciany'], [/\bjebać\b/giu, 'krucić'], [/\bjebac\b/giu, 'krucic'],
+            [/\bkurwa\b/giu, 'kruci'], [/\bkurwą\b/giu, 'krucią'], [/\bkurwie\b/giu, 'krucie'], [/\bkurwiarz\b/giu, 'kruciarz'],
+            [/\bchujowy\b/giu, 'kruciowy'], [/\bchuj\b/giu, 'kruci'], [/\bgówniany\b/giu, 'kruciany'], [/\bgowniany\b/giu, 'kruciany'],
+            [/\bgówno\b/giu, 'krucio'], [/\bgowno\b/giu, 'krucio'], [/\bpizda\b/giu, 'krucia']
+        ];
+        return replacements.reduce((text, [pattern, replacement]) => text.replace(pattern, match => {
+            if (match === match.toUpperCase()) return replacement.toUpperCase();
+            if (match[0] === match[0].toUpperCase()) return replacement[0].toUpperCase() + replacement.slice(1);
+            return replacement;
+        }), String(value ?? ''));
+    };
+ctx.installChatProfanityFilter = function installChatProfanityFilter() {
+        const wrapper = ctx.getShacalGameEngine()?.chatController?.getChatInputWrapper;
+        if (typeof wrapper !== 'function' || wrapper.__shacalProfanityFilter) return;
+        const patched = function(...args) {
+            const chat = Reflect.apply(wrapper, this, args);
+            if (!chat || typeof chat.getDataAndSendRequest !== 'function' || chat.getDataAndSendRequest.__shacalProfanityFilter) return chat;
+            const send = chat.getDataAndSendRequest;
+            chat.getDataAndSendRequest = function(message, ...rest) { return Reflect.apply(send, this, [ctx.sanitizeChatMessage(message), ...rest]); };
+            chat.getDataAndSendRequest.__shacalProfanityFilter = true;
+            return chat;
+        };
+        patched.__shacalProfanityFilter = true;
+        const controller = ctx.getShacalGameEngine()?.chatController;
+        if (controller) controller.getChatInputWrapper = patched;
+    };
 ctx.INVENTORY_ITEM_SELECTOR = [
         '.inventory-item', '.inventory-grid .item', '.inventory_wrapper .item',
         '.inventory .item', '.equipment-wrapper .item'
@@ -507,5 +541,7 @@ ctx.legendaryChatActiveJob = null;
 ctx.legendaryChatTimer = null;
 ctx.legendaryChatScope = '';
 ctx.legendaryChatLastStatus = 'Gotowy do sprawdzenia ekwipunku.';
-ctx.legendaryChatPrimedLoot = new WeakMap();}});
+ctx.legendaryChatPrimedLoot = new WeakMap();
+ctx.chatProfanityTimer = setInterval(() => { try { ctx.installChatProfanityFilter(); } catch {} }, 1000);
+ctx.installChatProfanityFilter();}});
 })(window.ShacalRuntime);

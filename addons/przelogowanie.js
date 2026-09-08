@@ -138,6 +138,12 @@ ctx.updateE2Tooltip = function updateE2Tooltip(now) {
         tip.style.opacity=document.getElementById('shacal-glow-panel')?.style.opacity||String(1-ctx.settings.panelTransparency/100);
     };
 ctx.syncE2Relogger = function syncE2Relogger() {
+        const factory=ctx.getShacalGameEngine()?.changePlayer?.charlist;
+        if(factory&&typeof factory.createCharacterAvatar==='function'&&!factory.createCharacterAvatar.__shacalE2){
+            const original=factory.createCharacterAvatar;
+            const wrapped=function(model,...args){const node=Reflect.apply(original,this,[model,...args]);if(node instanceof Element&&model?.id!=null){node.dataset.shacalCharacterId=String(model.id);node.dataset.shacalCharacterWorld=String(model.world||'');}return node;};
+            wrapped.__shacalE2=true;factory.createCharacterAvatar=wrapped;
+        }
         const avatars=[...document.querySelectorAll('.relogger__one-character')];
         ctx.e2AvatarTimers=new WeakMap();
         const desired=new Map();
@@ -157,13 +163,16 @@ ctx.syncE2Relogger = function syncE2Relogger() {
                 const world=group.getAttribute('data-world');
                 const models=characters.filter(c=>c.world===world);
                 const nodes=[...group.querySelectorAll('.relogger__one-character')];
-                if (world!==location.hostname.split('.')[0] || nodes.length!==models.length) return;
+                if (world!==location.hostname.split('.')[0]) return;
                 // Refuse ambiguous reordered/replaced avatars instead of highlighting the wrong character.
                 nodes.forEach((node,i)=>{
                     const background=node.querySelector('.img-avatar-correct')?.style.backgroundImage||'';
                     // An avatar still loading must not disable all other characters.
-                    if(typeof models[i].icon!=='string' || !models[i].icon || !background.includes(models[i].icon))return;
-                    const entries=timers.filter(t=>t.charId===String(models[i].id)).sort((a,b)=>Number(b.controlsGlow)-Number(a.controlsGlow)||a.min-b.min);
+                    const matches=models.filter(model=>typeof model.icon==='string'&&model.icon&&background.includes(model.icon));
+                    const tagged=node.dataset.shacalCharacterId;
+                    const model=tagged?models.find(m=>String(m.id)===tagged):matches.length===1?matches[0]:nodes.length===models.length&&matches.includes(models[i])?models[i]:null;
+                    if(!model)return;
+                    const entries=timers.filter(t=>t.charId===String(model.id)).sort((a,b)=>Number(b.controlsGlow)-Number(a.controlsGlow)||a.min-b.min);
                     if (!entries.length) return;
                     matched++; ctx.e2AvatarTimers.set(node,entries);
                     if (entries.some(t=>t.controlsGlow && now>=t.max)) desired.set(node,'sg-e2-max');
