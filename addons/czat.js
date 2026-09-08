@@ -549,8 +549,10 @@ ctx.installChatProfanityInput = function installChatProfanityInput() {
                 const shift = sanitized.length - value.length;
                 const nextStart = Math.min(Math.max(0, (start ?? value.length) + shift), sanitized.length);
                 const nextEnd = Math.min(Math.max(0, (end ?? value.length) + shift), sanitized.length);
-                input.setSelectionRange?.(nextStart, nextEnd);
                 input.dispatchEvent(new Event('input', {bubbles:true}));
+                setTimeout(() => {
+                    try { input.setSelectionRange?.(nextStart, nextEnd); } catch {}
+                }, 0);
             };
             input.addEventListener('input', clean, true);
             input.addEventListener('keydown', clean, true);

@@ -1,5 +1,5 @@
 {
-  "version": "6.11.7",
+  "version": "6.11.8",
   "scripts": [
     "panel.js",
     "addons/glow.js",

@@ -6,7 +6,7 @@ function shacalBootstrap(window, privilegedRequest) {
     const parts = new Map();
     const ctx = Object.create(null);
     const runtime = window.ShacalRuntime = {
-        version: '6.11.7', state: 'loading', context: ctx,
+        version: '6.11.8', state: 'loading', context: ctx,
         request: privilegedRequest || window.__shacalRequest,
         registerPart(id, part) {
             if (this.state !== 'loading') throw Error('Rejestracja po uruchomieniu: ' + id);
