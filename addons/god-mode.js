@@ -489,7 +489,18 @@
 
  // Reuse the same painter synchronously, with independent trail state per actor.
  const remoteBindings=new Map();
- let remoteLooks=new Map();
+ let remoteLooks=new Map(),nativeListBinding=null;
+ function nativeEffects(actor){return [actor.matchmakingChampionAura,actor.wanted,actor.whoIsHereGlow,actor.getColorMark?.(),actor.getFollowController?.()?.getFollowGlow?.()].filter(x=>x&&typeof x==='object');}
+ function restoreNativeList(){const b=nativeListBinding;if(b&&b.manager.getDrawableList===b.wrapper){if(b.own)b.manager.getDrawableList=b.original;else delete b.manager.getDrawableList;}nativeListBinding=null;}
+ function attachNativeList(){
+  const manager=window.Engine?.others;if(nativeListBinding?.manager===manager)return;
+  restoreNativeList();if(typeof manager?.getDrawableList!=='function')return;
+  const b={manager,original:manager.getDrawableList,own:Object.hasOwn(manager,'getDrawableList')};
+  b.wrapper=function(...args){const list=Reflect.apply(b.original,this,args);if(this!==manager||!otherEffectsAllowed()||!Array.isArray(list))return list;
+   const excluded=new Set();for(const [actor,binding] of remoteBindings){const a=binding.appearance;if(a.enabled&&(a.halo||a.neonEnabled))for(const effect of nativeEffects(actor))excluded.add(effect);}
+   return excluded.size?list.filter(item=>!excluded.has(item)):list;
+  };manager.getDrawableList=b.wrapper;nativeListBinding=b;
+ }
  const identityNumber=value=>/^[1-9][0-9]{0,19}$/.test(String(value??''))?String(value):null;
  const syncIdentity=()=>{
   const d=window.Engine?.hero?.d||{},hero=window.Engine?.hero;
@@ -528,6 +539,7 @@
   }
  }
  function refreshRemoteBindings(){
+  attachNativeList();
   if(!otherEffectsAllowed()){clearRemote();return;}
   const visible=new Set(visibleOthers());
   for(const [actor,b] of remoteBindings)if(!visible.has(actor)||!remoteLooks.has(String(actor.d?.id??actor.id)))detachRemote(actor,b);
@@ -590,7 +602,7 @@
   }
  }
  const timer=setInterval(attach,1000);attach();
- window.ShacalAuraTest={version:'0.9.0',setRemoteLooks,clearRemote,visibleOtherIds:()=>visibleOthers().map(a=>String(a.d?.id??a.id)),savedSyncSnapshot,otherEffectsAllowed,save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,deleteProfile:deleteCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,showOtherPlayersEffects:state.showOtherPlayersEffects,remoteActors:remoteBindings.size,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;notifyOtherEffectsPreference();clearRemote();window.removeEventListener('shacal-godmode-viewer-change',viewerChanged);footprints=[];stopMusic();clearInterval(timer);trailStampCache.clear();partyControls.remove();detach();root.remove();}};
+ window.ShacalAuraTest={version:'0.9.0',setRemoteLooks,clearRemote,visibleOtherIds:()=>visibleOthers().map(a=>String(a.d?.id??a.id)),savedSyncSnapshot,otherEffectsAllowed,save:saveGodMode,saveProfile:saveCharacterProfile,loadProfile:loadCharacterProfile,deleteProfile:deleteCharacterProfile,diagnostics:()=>({attached:!!binding,draws,error:lastError,enabled:state.enabled,dirty:godModeDirty,showOtherPlayersEffects:state.showOtherPlayersEffects,remoteActors:remoteBindings.size,footprints:footprints.length,profileKey:activeProfileKey,nativeOverride:state.overrideNative&&!!binding?.listWrapper}),dispose(){disposed=true;notifyOtherEffectsPreference();clearRemote();restoreNativeList();window.removeEventListener('shacal-godmode-viewer-change',viewerChanged);footprints=[];stopMusic();clearInterval(timer);trailStampCache.clear();partyControls.remove();detach();root.remove();}};
 })();
 
 
